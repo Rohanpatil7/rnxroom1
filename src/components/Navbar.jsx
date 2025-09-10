@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate,useLocation } from "react-router-dom";
 // import assets from "../assets";
@@ -5,10 +6,10 @@ import { Link, useNavigate,useLocation } from "react-router-dom";
 
 const Navbar = () => {
   const navLinks = [
-    { name: "Home", path: "/" },
-    { name: "Rooms", path: "/rooms" },
-    { name: "Contact", path: "/" },
-    { name: "About", path: "/" },
+    // { name: "Home", path: "/" },
+    // { name: "Rooms", path: "/rooms" },
+    // { name: "Contact", path: "/" },
+    // { name: "About", path: "/" },
   ];
 
 
@@ -75,7 +76,7 @@ const Navbar = () => {
           </a>
         ))}
         <button
-          className={`border px-4 py-1 text-sm font-light rounded-full cursor-pointer hover:bg-amber-50 hover:text-black hover:font-medium  hover:shadow-2xl shadow-fuchsia-200 ${
+          className={`border px-4 py-1 text-sm font-light rounded-lg scale-120 cursor-pointer hover:bg-amber-50 hover:text-black hover:font-medium  hover:shadow-2xl shadow-fuchsia-200 ${
             isScrolled ? "text-black  hover:text-white hover:bg-indigo-600 hover:font-medium shadow-indigo-200" : "text-white "
           } transition-all`} onClick={() => navigate('/rooms')}>
           Book Now
@@ -106,7 +107,7 @@ const Navbar = () => {
       {/* </div>  */}
 
       {/* Mobile Menu Button */}
-      <div className="flex items-center gap-3 md:hidden">
+      {/* <div className="flex items-center gap-3 md:hidden">
         <svg //replace this with img tag later and src={assets.menuIcon}
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className={`h-6 w-6 cursor-pointer ${isScrolled ? "invert" : ""}`}
@@ -119,9 +120,9 @@ const Navbar = () => {
           <line x1="4" y1="12" x2="20" y2="12" />
           <line x1="4" y1="18" x2="20" y2="18" />
         </svg>
-      </div>
+      </div> */}
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu
       <div
         className={`fixed top-0 left-0 w-full h-screen bg-white text-base flex flex-col md:hidden items-center justify-center gap-6 font-medium text-gray-800 transition-all duration-500 ${
           isMenuOpen ? "translate-x-0" : "-translate-x-full"
@@ -156,7 +157,7 @@ const Navbar = () => {
         {/* <button className="bg-black text-white px-8 py-2.5 rounded-full transition-all duration-500">
           Login
         </button> */}
-      </div>
+      {/* </div> */} 
     </nav>
   );
 };

@@ -58,7 +58,7 @@ function Costcard({ bookingData }) {
 
            {/* --- CHANGE: Dynamically list each room type from the cart --- */}
            {rooms.map((room) => (
-             <div key={room.roomId} className='flex justify-between text-gray-600 text-sm'>
+             <div key={room.roomId} className='flex justify-between text-indigo-600 text-sm '>
                 <p>{room.quantity} x {room.title}</p>
                 <p>₹{(room.quantity * room.pricePerNight * dates.nights).toLocaleString('en-IN')}</p>
              </div>
@@ -83,7 +83,7 @@ function Costcard({ bookingData }) {
            <hr className='my-2' />
            <div className='flex justify-between font-bold text-black'>
                 <p>Grand Total</p>
-                <p>₹{grandTotal.toFixed(0).toLocaleString('en-IN')}</p>
+                <p className='text-indigo-600'>₹{grandTotal.toFixed(0).toLocaleString('en-IN')}</p>
            </div>
        </div>
     </div>

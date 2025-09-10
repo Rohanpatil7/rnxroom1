@@ -48,8 +48,8 @@ const BookingCart = ({ cart, bookingDetails, onRemove, onAdd, totalPrice }) => {
                         <h3 className="text-lg font-semibold mb-2 text-gray-300 hidden md:block">Your Selection</h3>
                         <div className="flex items-center gap-4 overflow-x-auto pb-2">
                             {cart.map(item => (
-                                <div key={item.room._id} className="bg-gray-700 rounded-lg p-3 flex-shrink-0 flex items-center gap-4">
-                                    <div>
+                                <div key={item.room._id} className="bg-gray-700 rounded-lg p-3 flex-shrink-0 flex flex-col items-center gap-4">
+                                    <div className='flex flex-col items-center'>
                                         <p className="font-bold whitespace-nowrap">{item.room.title}</p>
                                         <p className="text-sm text-gray-400">
                                             ₹{item.room.pricePerNight.toLocaleString('en-IN')}
