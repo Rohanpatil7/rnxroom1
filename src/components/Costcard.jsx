@@ -45,7 +45,7 @@ function Costcard({ bookingData }) {
            </div>
 
            <div className='text-gray-500 italic font-medium text-[12px] mt-1'>
-                <p> ← <Link to="/rooms" className="hover:underline">Edit Stay Details</Link></p>
+                <p> ← <Link to="/" className="hover:underline">Edit Stay Details</Link></p>
            </div>
        </div>
 

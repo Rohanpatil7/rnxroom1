@@ -17,7 +17,7 @@ function Booking() {
         <div className="text-center">
             <h1 className='text-2xl font-semibold mb-2'>No booking details found.</h1>
             <p className="text-gray-600">Please select a room first.</p>
-            <Navigate to="/rooms" replace /> 
+            <Navigate to="/" replace /> 
         </div>
       </div>
     );

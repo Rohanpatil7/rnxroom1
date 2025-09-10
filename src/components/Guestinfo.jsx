@@ -368,7 +368,7 @@ export default function Guestinfo() {
         rooms: [
             { roomId: "1", title: 'Standard Room', quantity: 2, maxCapacity: 2 }, 
             { roomId: "2", title: 'Deluxe Room', quantity: 1, maxCapacity: 4 },
-            { roomId: "2", title: 'Ultra Deluxe Room', quantity: 1, maxCapacity: 6 }
+            { roomId: "3", title: 'Ultra Deluxe Room', quantity: 1, maxCapacity: 6 }
         ],
         guests: { adults: 3, children: 1 },
     };

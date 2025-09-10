@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { Navigate } from "react-router-dom";
 import Costcard from "./Costcard";
-import PaymentInfo from "./Paymentinfo";
+// import PaymentInfo from "./Paymentinfo";
 import Guestinfo from "./Guestinfo";
 
 function Reviewinfo({ bookingDetails }) {
@@ -53,7 +53,7 @@ function Reviewinfo({ bookingDetails }) {
           setGuestAllocation={setGuestAllocation}
           totalGuests={totalGuests}
         />
-        <PaymentInfo />
+        {/* <PaymentInfo /> */}
       </div>  
 
       <div className="w-full lg:w-1/3">

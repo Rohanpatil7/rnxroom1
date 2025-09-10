@@ -228,18 +228,20 @@ export default function DatePricePicker({ onDateChange = () => {} }) {
           <div onClick={() => { setIsCalendarOpen(true); setIsGuestPickerOpen(false); }} className="flex-1 w-full p-2 rounded-full hover:bg-gray-100 cursor-pointer text-left">
             <label className="text-xs font-bold text-gray-500 px-2">Check-out</label>
             <div className="flex items-center space-x-2 px-2"><CalendarIcon /><span className={`text-sm ${checkOutDate ? 'text-gray-800' : 'text-gray-400'}`}>{checkOutDate ? formatDate(checkOutDate) : 'Add date'}</span></div>
+            
           </div>
-          
+          <div className="h-px w-full bg-gray-200 md:h-8 md:w-px"></div>
+          <div className='flex flex-row'>
           {numberOfNights > 0 && (
             <div className="w-full md:w-auto flex items-center">
-                <div className="h-px w-full bg-gray-200 md:h-8 md:w-px"></div>
+                {/* <div className="h-px w-full bg-gray-200 md:h-8 md:w-px"></div> */}
                 <div className="w-full p-2 text-left">
                     <label className="text-xs font-bold text-gray-500 px-2">Duration</label>
                     <div className="flex items-center space-x-2 px-2"><MoonIcon /><span className="text-sm text-gray-800 font-semibold">{numberOfNights} night{numberOfNights > 1 ? 's' : ''}</span></div>
                 </div>
             </div>
           )}
-          <div className="h-px w-full bg-gray-200 md:h-8 md:w-px"></div>
+          {/* <div className="h-px w-full bg-gray-200 md:h-8 md:w-px"></div> */}
           {/* Guests */}
           <div className="flex-1 w-full p-2 relative">
             <div onClick={() => { setIsGuestPickerOpen(prev => !prev); setIsCalendarOpen(false); }} className="text-left cursor-pointer rounded-full hover:bg-gray-100 p-2">
@@ -247,6 +249,7 @@ export default function DatePricePicker({ onDateChange = () => {} }) {
                 <div className="flex items-center space-x-2 px-2"><UserIcon /><span className="text-sm text-gray-800">{totalGuests} guest{totalGuests > 1 ? 's' : ''}</span></div>
             </div>
             {isGuestPickerOpen && renderGuestPicker()}
+          </div>
           </div>
           {/* Search Button */}
           <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 sm:px-6 rounded-full transition duration-300 w-full md:w-auto">Search</button>
