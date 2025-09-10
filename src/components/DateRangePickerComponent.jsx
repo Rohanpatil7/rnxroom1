@@ -33,7 +33,7 @@ const DateRangePickerComponent = ({ onDateChange }) => {
     // `w-full` makes it take the full width on small screens.
     // `max-w-lg` prevents it from becoming too wide on large screens.
     // `mx-auto` is added to center it within its parent on larger screens.
-    <div className="flex flex-col items-start gap-6 p-4 border rounded-2xl shadow-md w-full max-w-lg mx-auto">
+    <div className="flex flex-col items-start gap-6 p-4 border rounded-2xl shadow-md w-full max-w-lg mx-auto sm:max-w-full">
       <h2 className="text-lg font-bold text-gray-700">Select Dates</h2>
       <DateRangePicker
         placeholder="Select Check-in and Check-out"

@@ -185,9 +185,9 @@ function GuestInfoFormView({ initialBookingDetails, navigate }) {
 
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
-            <div className="container   sm:p-4 ">
+            <div className="container mx-auto p-4 sm:p-6 ">
                  
-                <div className="max-w-10xl ">
+                <div className="max-w-8xl ">
                     <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
                         <form onSubmit={handleSubmit} noValidate>
                             {Object.entries(groupedRooms).map(([roomTitle, rooms]) => {

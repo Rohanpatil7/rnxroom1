@@ -142,7 +142,7 @@ export default function DatePricePicker({ onDateChange = () => {} }) {
       const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
       const price = pricingData[dateString];
 
-      let classes = "aspect-square flex flex-col items-center justify-center rounded-lg cursor-pointer transition-colors duration-200 text-xs sm:text-sm";
+      let classes = "aspect-square flex flex-col items-center justify-center rounded-lg cursor-pointer transition-colors duration-200 text-xs sm:text-sm sm:w-full";
       let priceTextClass = "text-[10px] sm:text-xs mt-1 font-bold";
       const isPast = day < today;
       const isToday = day.getTime() === today.getTime();
@@ -166,7 +166,7 @@ export default function DatePricePicker({ onDateChange = () => {} }) {
       );
     }
     return (
-      <div className="absolute top-full mt-2 w-md-[100vw] max-w-sm left-1/2 -translate-x-1/2 md:w-auto md:max-w-none md:left-0 md:translate-x-0 bg-white p-4 rounded-lg shadow-2xl border border-gray-200 z-100 sm:w-full">
+      <div className="absolute top-full mt-2 w-[95vw] max-w-lg left-1/2 -translate-x-1/2 md:w-auto md:max-w-none md:left-0 md:translate-x-0 bg-white p-4 rounded-lg shadow-2xl border border-gray-200 z-50  ">
         <div className="flex items-center justify-between mb-4">
           <button type="button" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 rounded-full hover:bg-gray-100"><ChevronLeftIcon /></button>
           <div className="font-semibold text-lg text-gray-800  ">{currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</div>
@@ -215,7 +215,7 @@ export default function DatePricePicker({ onDateChange = () => {} }) {
   );
 
   return (
-    <div className="w-full flex items-start justify-center px-4 sm:px-4 font-sans">
+    <div className="w-full flex items-start justify-center px-4 sm:px-1 font-sans">
       <div ref={pickerRef} className="relative w-6xl max-w-4xl">
         <div className="bg-white rounded-xl md:rounded-full shadow-lg p-2 flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-1 w-full">
           {/* Check-in */}  

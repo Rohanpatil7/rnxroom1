@@ -17,9 +17,9 @@ function AllRooms() {
 
   // This would typically come from an API
   const rooms = [
-    { _id: "1", title: "Standard Room", description: "A cozy room with all the basic amenities for a comfortable stay.", pricePerNight: 3000, remainingRooms: 8 },
-    { _id: "2", title: "Deluxe Room", description: "A more spacious room with premium furnishings and a city view.", pricePerNight: 3500, remainingRooms: 10 },
-    { _id: "3", title: "Ultra Deluxe Room", description: "Experience luxury with our ultra deluxe room, complete with a bathtub and balcony.", pricePerNight: 4000, remainingRooms: 5 }
+    { _id: "1", title: "Standard Room", description: "A cozy room with all the basic amenities for a comfortable stay.", pricePerNight: 3000, remainingRooms: 8, maxCapacity: 2 },
+    { _id: "2", title: "Deluxe Room", description: "A more spacious room with premium furnishings and a city view.", pricePerNight: 3500, remainingRooms: 10, maxCapacity: 3 },
+    { _id: "3", title: "Ultra Deluxe Room", description: "Experience luxury with our ultra deluxe room, complete with a bathtub and balcony.", pricePerNight: 4000, remainingRooms: 5, maxCapacity: 4 }
   ];
 
   const handleAddToCart = (roomToAdd) => {
