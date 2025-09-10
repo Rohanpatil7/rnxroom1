@@ -47,7 +47,7 @@ const Navbar = () => {
       {/* Logo */}
       <Link to={'/'} className={`h-9 ${isScrolled && "invert opacity-100 "}`}>
         <img
-          src={"https://raw.githubusercontent.com/prebuiltui/prebuiltui/main/assets/dummyLogo/dummyLogoColored.svg"}
+          src="/RN_logo.jpg"
           alt="logo"
           className={` h-9 bg-amber-50 ${isScrolled && "invert opacity-100 "}`}
         />
