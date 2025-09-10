@@ -166,7 +166,7 @@ export default function DatePricePicker({ onDateChange = () => {} }) {
       );
     }
     return (
-      <div className="absolute top-full mt-2 w-[95vw] max-w-lg left-1/2 -translate-x-1/2 md:w-auto md:max-w-none md:left-0 md:translate-x-0 bg-white p-4 rounded-lg shadow-2xl border border-gray-200 z-50  ">
+      <div className="absolute top-20 mt-2 w-[95vw] max-w-lg left-1/2 -translate-x-1/2 md:w-auto md:max-w-none md:left-0 md:translate-x-0 bg-white p-4 rounded-lg shadow-2xl border border-gray-200 z-50  ">
         <div className="flex items-center justify-between mb-4">
           <button type="button" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 rounded-full hover:bg-gray-100"><ChevronLeftIcon /></button>
           <div className="font-semibold text-lg text-gray-800  ">{currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</div>

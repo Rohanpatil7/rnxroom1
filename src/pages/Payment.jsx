@@ -21,10 +21,10 @@ function Payment() {
         <h1 className='text-3xl md:text-4xl font-bold text-gray-800'>Complete Your Payment</h1>
         <p className='text-md text-gray-500 mt-2'>Securely enter your payment details to confirm your reservation.</p>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start h-svh">
         {/* The main content area for the payment form */}
         <div className="lg:col-span-2">
-          <Paymentinfo />
+          <Paymentinfo bookingData={bookingSummaryData} />
         </div>
         {/* The sidebar area for the cost summary */}
         <div className="lg:col-span-1">
