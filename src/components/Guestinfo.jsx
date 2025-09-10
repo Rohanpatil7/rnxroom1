@@ -1,8 +1,22 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import { useLocation, useNavigate, UNSAFE_NavigationContext as NavigationContext } from 'react-router-dom';
 
 // --- SVG Icon Components ---
 const KeyIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-gray-600"><circle cx="7.5" cy="15.5" r="5.5"></circle><path d="m21 2-9.6 9.6"></path><path d="m15.5 7.5 3 3L22 7l-3-3"></path></svg>);
+
+// --- Reusable InputField Component (Moved to top level) ---
+// By defining it here, it is not recreated on every render of the parent component.
+const InputField = ({ id, label, type = "text", placeholder, value, onChange, error }) => (
+    <div>
+        <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+        <input 
+            type={type} id={id} name={id} 
+            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${error ? 'border-red-500' : 'border-gray-300'}`} 
+            placeholder={placeholder} value={value} onChange={onChange}
+        />
+        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+    </div>
+);
 
 // --- Helper function to create a new adult guest object ---
 const createAdultGuest = (uniqueId) => ({
@@ -14,7 +28,6 @@ const createAdultGuest = (uniqueId) => ({
 
 // --- Helper function to generate initial state for guests distributed in rooms ---
 const generateInitialRoomGuestsState = (roomsData = [], guestsData = { adults: 1, children: 0 }) => {
-    // 1. Create an empty instance for each room selected
     const allIndividualRooms = [];
     roomsData.forEach(room => {
         for (let i = 0; i < room.quantity; i++) {
@@ -31,7 +44,6 @@ const generateInitialRoomGuestsState = (roomsData = [], guestsData = { adults: 1
 
     if (allIndividualRooms.length === 0) return [];
 
-    // 2. Distribute adults one-by-one to the least occupied room
     for (let i = 0; i < guestsData.adults; i++) {
         const leastOccupiedRoom = allIndividualRooms
             .filter(r => (r.adults.length + r.children.length) < r.maxCapacity)
@@ -41,18 +53,15 @@ const generateInitialRoomGuestsState = (roomsData = [], guestsData = { adults: 1
             const adultIdx = leastOccupiedRoom.adults.length;
             leastOccupiedRoom.adults.push(createAdultGuest(`adult-${leastOccupiedRoom.uniqueRoomId}-${adultIdx}`));
         } else {
-            break; // Stop if no rooms have capacity
+            break;
         }
     }
 
-    // 3. Distribute children, prioritizing rooms that already have an adult
     for (let i = 0; i < guestsData.children; i++) {
-        // First, find the least occupied room WITH AN ADULT that has capacity
         let targetRoom = allIndividualRooms
             .filter(r => r.adults.length > 0 && (r.adults.length + r.children.length) < r.maxCapacity)
             .sort((a, b) => (a.adults.length + a.children.length) - (b.adults.length + b.children.length))[0];
 
-        // If no such room exists, fall back to ANY least occupied room with capacity
         if (!targetRoom) {
             targetRoom = allIndividualRooms
                 .filter(r => (r.adults.length + r.children.length) < r.maxCapacity)
@@ -63,11 +72,10 @@ const generateInitialRoomGuestsState = (roomsData = [], guestsData = { adults: 1
             const childIdx = targetRoom.children.length;
             targetRoom.children.push({ uniqueId: `child-${targetRoom.uniqueRoomId}-${childIdx}`, fullName: '', age: '' });
         } else {
-            break; // Stop if no rooms have capacity
+            break;
         }
     }
     
-    // 4. Final check: If a room with children has no adults, try to move one from another room.
     allIndividualRooms.forEach(room => {
         if (room.adults.length === 0 && room.children.length > 0) {
             const donorRoom = allIndividualRooms.find(r => r.adults.length > 1);
@@ -91,17 +99,16 @@ function GuestInfoFormView({ initialBookingDetails, navigate }) {
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // ############### START OF IMPROVED LOGIC ###############
+    const nextGuestId = useRef(0);
+    
     // --- Handlers ---
     const handleGuestCountChangeInRoomGroup = (roomTitle, guestType, amount) => {
         setRoomGuests(prevRoomGuests => {
-            // Create a deep copy to avoid direct state mutation
             const newRoomGuests = JSON.parse(JSON.stringify(prevRoomGuests));
             
             const totalRooms = newRoomGuests.length;
             const totalAdults = newRoomGuests.reduce((sum, r) => sum + r.adults.length, 0);
     
-            // Map rooms to include their original index and current occupancy for easier processing
             const roomsInGroup = newRoomGuests
                 .map((room, index) => ({
                     ...room,
@@ -111,52 +118,40 @@ function GuestInfoFormView({ initialBookingDetails, navigate }) {
                 .filter(r => r.roomTitle === roomTitle);
     
             if (roomsInGroup.length === 0) {
-                return prevRoomGuests; // No rooms of this type found, do nothing.
+                return prevRoomGuests;
             }
     
-            if (amount === 1) { // --- LOGIC TO ADD A GUEST (SEQUENTIAL FILL) ---
-                // Find the first room in sequential order (by roomNumber) that has capacity.
+            if (amount === 1) {
                 const roomToAddGuestTo = roomsInGroup
-                    .filter(r => r.occupancy < r.maxCapacity)      // 1. Get only rooms with available space
-                    .sort((a, b) => a.roomNumber - b.roomNumber)[0]; // 2. Pick the one with the lowest room number (e.g., Room #1 before Room #2)
+                    .filter(r => r.occupancy < r.maxCapacity)
+                    .sort((a, b) => a.roomNumber - b.roomNumber)[0];
     
                 if (!roomToAddGuestTo) {
-                    return prevRoomGuests; // No room with capacity found, do nothing.
+                    return prevRoomGuests;
+                }
+
+                const newId = `dynamic-${nextGuestId.current++}`;
+    
+                if (guestType === 'adults') {
+                    newRoomGuests[roomToAddGuestTo.originalIndex].adults.push(createAdultGuest(`adult-${newId}`));
+                } else {
+                    newRoomGuests[roomToAddGuestTo.originalIndex].children.push({ uniqueId: `child-${newId}`, fullName: '', age: '' });
                 }
     
-                // Add the guest to the actual room object in our copied state array
+            } else if (amount === -1) {
                 if (guestType === 'adults') {
-                    newRoomGuests[roomToAddGuestTo.originalIndex].adults.push(createAdultGuest(`adult-dynamic-${Date.now()}`));
-                } else { // 'children'
-                    newRoomGuests[roomToAddGuestTo.originalIndex].children.push({ uniqueId: `child-dynamic-${Date.now()}`, fullName: '', age: '' });
-                }
-    
-            } else if (amount === -1) { // --- LOGIC TO REMOVE A GUEST ---
-                if (guestType === 'adults') {
-                    // Do not remove an adult if it brings the total below one per room.
                     if (totalAdults <= totalRooms) {
                         return prevRoomGuests;
                     }
-    
-                    // Find rooms in the group that actually have adults to remove
                     const roomsWithAdults = roomsInGroup.filter(r => r.adults.length > 0);
-                    if (roomsWithAdults.length === 0) {
-                        return prevRoomGuests;
-                    }
-    
-                    // Sort by number of adults, descending, to remove from the room with the MOST adults.
+                    if (roomsWithAdults.length === 0) { return prevRoomGuests; }
                     roomsWithAdults.sort((a, b) => b.adults.length - a.adults.length);
                     const roomToRemoveFrom = roomsWithAdults[0];
                     newRoomGuests[roomToRemoveFrom.originalIndex].adults.pop();
     
-                } else { // 'children'
-                    // Find rooms in the group that have children to remove
+                } else {
                     const roomsWithChildren = roomsInGroup.filter(r => r.children.length > 0);
-                    if (roomsWithChildren.length === 0) {
-                        return prevRoomGuests;
-                    }
-                    
-                    // To be consistent, remove from the highest numbered room first
+                    if (roomsWithChildren.length === 0) { return prevRoomGuests; }
                     roomsWithChildren.sort((a, b) => b.roomNumber - a.roomNumber);
                     const roomToRemoveFrom = roomsWithChildren[0];
                     newRoomGuests[roomToRemoveFrom.originalIndex].children.pop();
@@ -166,14 +161,25 @@ function GuestInfoFormView({ initialBookingDetails, navigate }) {
             return newRoomGuests;
         });
     };
-    // ############### END OF IMPROVED LOGIC ###############
 
     const handleGuestInfoChange = (roomIndex, guestType, guestIndex, field, value) => {
-        setRoomGuests(prev => {
-            const newRoomGuests = JSON.parse(JSON.stringify(prev));
-            newRoomGuests[roomIndex][guestType][guestIndex][field] = value;
-            return newRoomGuests;
+        setRoomGuests(prevRoomGuests => {
+            return prevRoomGuests.map((room, rIndex) => {
+                if (rIndex !== roomIndex) {
+                    return room;
+                }
+
+                const updatedGuests = room[guestType].map((guest, gIndex) => {
+                    if (gIndex !== guestIndex) {
+                        return guest;
+                    }
+                    return { ...guest, [field]: value };
+                });
+
+                return { ...room, [guestType]: updatedGuests };
+            });
         });
+
         const errorKey = `${roomIndex}-${guestType}-${guestIndex}-${field}`;
         if (errors[errorKey]) {
             setErrors(prev => {
@@ -229,19 +235,7 @@ function GuestInfoFormView({ initialBookingDetails, navigate }) {
                 navigate('/payment', { state: { booking: finalBookingData } });
             }
         }
-    };
-
-    const InputField = ({ id, label, type = "text", placeholder, value, onChange, error }) => (
-        <div>
-            <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-            <input 
-                type={type} id={id} name={id} 
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${error ? 'border-red-500' : 'border-gray-300'}`} 
-                placeholder={placeholder} value={value} onChange={onChange}
-            />
-            {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-        </div>
-    );
+    };  
     
     const groupedRooms = roomGuests.reduce((acc, room) => {
         (acc[room.roomTitle] = acc[room.roomTitle] || []).push(room);
@@ -251,7 +245,6 @@ function GuestInfoFormView({ initialBookingDetails, navigate }) {
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
             <div className="container mx-auto sm:px-4 ">
-                 
                 <div className="max-w-8xl ">
                     <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
                         <form onSubmit={handleSubmit} noValidate>
