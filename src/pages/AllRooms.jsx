@@ -80,7 +80,7 @@ function AllRooms() {
         <DatePricePicker onDateChange={setBookingDetails} />
       </div>
       <div className='flex flex-col gap-4 mt-4 lg:pl-8 sm:px-0 lg:mx-24 md:mx-16 sm:mx-8 mb-4'>
-        <h2 className="font-semibold justify-center flex lg:text-4xl lg:justify-start sm:text-2xl">Select Your Room</h2>
+        <h2 className="font-semibold justify-center flex lg:text-3xl lg:justify-start sm:text-2xl">Select Your Room</h2>
         {rooms.map((room) => (
           <Roomcard
             key={room._id}
