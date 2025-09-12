@@ -45,11 +45,11 @@ const Navbar = () => {
       }`}
     >
       {/* Logo */}
-      <Link to={'/'} className={`h-9 ${isScrolled && "invert opacity-100 "}`}>
+      <Link to={'/'} className={`h-16 items-center align-middel ${isScrolled && "invert opacity-100 "}`}>
         <img
-          src="/RN_logo.jpg"
+          src="/hotelLUx.png"
           alt="logo"
-          className={` h-9 bg-amber-50 ${isScrolled && "invert opacity-100 "}`}
+          className={`h-18 justify-center align-middle ${isScrolled && "invert opacity-100 "}`}
         />
       </Link>
 
