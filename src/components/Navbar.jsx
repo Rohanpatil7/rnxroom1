@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate,useLocation } from "react-router-dom";
 // import assets from "../assets";
-// const logo = "roombook/src/assets/logo.svg"
+import logo from "/hotelLUx.png";
 
 const Navbar = () => {
   const navLinks = [
@@ -47,7 +47,7 @@ const Navbar = () => {
       {/* Logo */}
       <Link to={'/'} className={`h-16 items-center align-middel ${isScrolled && "invert opacity-100 "}`}>
         <img
-          src="/hotelLUx.png"
+          src={logo}
           alt="logo"
           className={`h-18 justify-center align-middle ${isScrolled && "invert opacity-100 "}`}
         />
