@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo  } from 'react';
 import { useNavigate } from 'react-router-dom'; // 1. Import useNavigate
 import Roomcard from '../components/Roomcard';
 import DatePricePicker from '../components/DatePricePicker';
@@ -16,12 +16,24 @@ function AllRooms() {
   const [cart, setCart] = useState([]);
 
   // This would typically come from an API
-  const rooms = [
+  const rooms = useMemo(() => [
     { _id: "1", title: "Standard Room", description: "A cozy room with all the basic amenities for a comfortable stay.", pricePerNight: 3000, remainingRooms: 8, maxCapacity: 2 },
     { _id: "2", title: "Deluxe Room", description: "A more spacious room with premium furnishings and a city view.", pricePerNight: 3500, remainingRooms: 10, maxCapacity: 3 },
     { _id: "3", title: "Ultra Deluxe Room", description: "Experience luxury with our ultra deluxe room, complete with a bathtub and balcony.", pricePerNight: 4000, remainingRooms: 5, maxCapacity: 4 }
-  ];
+  ], []);
 
+   // NEW: Memoized function to filter rooms based on guest count
+  const filteredRooms = useMemo(() => {
+    // If guests count is the default (1) or not set, show all rooms.
+    if (!bookingDetails || !bookingDetails.guests || bookingDetails.guests <= 1) {
+      return rooms;
+    }
+    // Filter rooms where max capacity is greater than or equal to the selected number of guests.
+    return rooms.filter(room => room.maxCapacity >= bookingDetails.guests);
+  }, [rooms, bookingDetails]);
+
+  
+  // Function to handle adding rooms to the cart
   const handleAddToCart = (roomToAdd) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.room._id === roomToAdd._id);
@@ -81,7 +93,7 @@ function AllRooms() {
       </div>
       <div className='flex flex-col gap-4 mt-4 lg:pl-8 sm:px-0 lg:mx-24 md:mx-16 sm:mx-8 mb-4'>
         <h2 className="font-semibold justify-center flex lg:text-3xl lg:justify-start sm:text-2xl">Select Your Room</h2>
-        {rooms.map((room) => (
+        {filteredRooms.map((room) => (
           <Roomcard
             key={room._id}
             room={room}

@@ -142,6 +142,20 @@ export default function DatePricePicker({ onDateChange = () => {} }) {
     }
   };
 
+
+    // NEW: Function to handle setting guests and updating the parent component
+  const handleSetGuests = () => {
+    onDateChange({
+        checkIn: checkInDate,
+        checkOut: checkOutDate,
+        nights: numberOfNights,
+        adults: adults,
+        children: children,
+        guests: totalGuests,
+    });
+    setIsGuestPickerOpen(false) ;
+  };
+
   const renderCalendar = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -219,7 +233,9 @@ export default function DatePricePicker({ onDateChange = () => {} }) {
   };
 
   const renderGuestPicker = () => (
-    <div ref={guestPickerRef} className="absolute top-full mt-2 w-[80vw] max-w-xs left-1 -translate-x-1/2 md:w-72 md:left-auto md:right-0 md:-translate-x-0 bg-white p-4 rounded-lg shadow-2xl border border-gray-200 z-20">
+    <div ref={guestPickerRef}
+      onClick={(e) => e.stopPropagation()}
+    className="absolute top-full mt-2 w-[80vw] max-w-xs left-1 -translate-x-1/2 md:w-72 md:left-auto md:right-0 md:-translate-x-0 bg-white p-4 rounded-lg shadow-2xl border border-gray-200 z-20">
       <div className="flex justify-between items-center mb-4">
         <div>
           <p className="font-semibold">Adults</p>
@@ -243,7 +259,7 @@ export default function DatePricePicker({ onDateChange = () => {} }) {
         </div>
       </div>
       <div className="border-t border-gray-200 mt-4 pt-4 flex justify-end">
-        <button onClick={() => setIsGuestPickerOpen(false)} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-300">
+        <button onClick={handleSetGuests} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-300">
           Set
         </button>
       </div>
