@@ -199,7 +199,7 @@ function GuestInfoFormView({ initialBookingDetails, navigate }) {
                 if (!guest.email || !guest.email.trim()) { newErrors[`${roomIndex}-adults-${guestIndex}-email`] = "Email is required."; isValid = false; } 
                 else if (!/\S+@\S+\.\S+/.test(guest.email)) { newErrors[`${roomIndex}-adults-${guestIndex}-email`] = "Email address is invalid."; isValid = false; }
                 if (!guest.phone || !guest.phone.trim()) { newErrors[`${roomIndex}-adults-${guestIndex}-phone`] = "Phone number is required."; isValid = false; } 
-                else if (!/^\+?(\d.*){10,15}$/.test(guest.phone)) { newErrors[`${roomIndex}-adults-${guestIndex}-phone`] = "Phone number is invalid."; isValid = false; }
+                else if (!/^[0-9\b]+$/.test(guest.phone) || guest.phone.length < 10 || guest.phone.length > 15) { newErrors[`${roomIndex}-adults-${guestIndex}-phone`] = "Phone number is invalid."; isValid = false; }
             });
             room.children.forEach((guest, guestIndex) => {
                 if (!guest.fullName.trim()) { newErrors[`${roomIndex}-children-${guestIndex}-fullName`] = "Full name is required."; isValid = false; }
@@ -297,7 +297,7 @@ function GuestInfoFormView({ initialBookingDetails, navigate }) {
                                                             <p className="font-medium text-gray-600 mb-2">{isPrimaryContact ? 'Primary Contact' : `Adult #${guestIndex + 1}`}</p>
                                                             <div className="mb-4"><InputField id={`${guest.uniqueId}-fullName`} label="Full Name" placeholder="John Doe" value={guest.fullName} onChange={(e) => handleGuestInfoChange(originalRoomIndex, 'adults', guestIndex, 'fullName', e.target.value)} error={errors[`${originalRoomIndex}-adults-${guestIndex}-fullName`]}/></div>
                                                             <div className="mb-4"><InputField id={`${guest.uniqueId}-email`} label="Email Address" type="email" placeholder="you@example.com" value={guest.email} onChange={(e) => handleGuestInfoChange(originalRoomIndex, 'adults', guestIndex, 'email', e.target.value)} error={errors[`${originalRoomIndex}-adults-${guestIndex}-email`]}/></div>
-                                                            <div className="mb-4"><InputField id={`${guest.uniqueId}-phone`} label="Phone Number" type="tel" placeholder="+91 12345 67890" value={guest.phone} onChange={(e) => handleGuestInfoChange(originalRoomIndex, 'adults', guestIndex, 'phone', e.target.value)} error={errors[`${originalRoomIndex}-adults-${guestIndex}-phone`]}/></div>
+                                                            <div className="mb-4"><InputField id={`${guest.uniqueId}-phone`} label="Phone Number" type="number" placeholder="+91 12345 67890" value={guest.phone} onChange={(e) => handleGuestInfoChange(originalRoomIndex, 'adults', guestIndex, 'phone', e.target.value)} error={errors[`${originalRoomIndex}-adults-${guestIndex}-phone`]}/></div>
                                                         </div>
                                                     )
                                                 })}
