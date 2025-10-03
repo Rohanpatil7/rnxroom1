@@ -1,94 +1,115 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
 
-function Costcard({ bookingData }) {
-  if (!bookingData || !bookingData.dates || !bookingData.rooms) {
+// Helper to format dates (unchanged)
+const formatDate = (date) => {
+  if (!date) return 'Select Date';
+  return new Date(date).toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
+// Helper to format currency (unchanged)
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount || 0);
+};
+
+function Costcard({ bookingDetails }) {
+  if (!bookingDetails) {
     return null;
   }
+  
+  // +++ MODIFIED: Destructure the new extraBedCost property with a default value +++
+  const { rooms = [], dates = {}, totalPrice = 0, extraBedCost = 0 } = bookingDetails;
+  const { checkIn, checkOut, nights = 0 } = dates;
 
-  const { rooms, dates, totalPrice } = bookingData;
-
-  const roomCount = rooms.reduce((sum, room) => sum + room.quantity, 0);
-  const totalGuests = 1; 
-
-  const basePrice = totalPrice;
-  const taxes = basePrice * 0.12; 
+  const totalRooms = rooms.reduce((sum, item) => sum + item.quantity, 0);
+  
+  // +++ MODIFIED: GST and Grand Total now include the extraBedCost +++
+  const gstAmount = (totalPrice + extraBedCost) * 0.12;
   const serviceFee = 299;
-  const grandTotal = basePrice + taxes + serviceFee;
-
-  const checkInDate = dates.checkIn ? format(new Date(dates.checkIn), 'dd MMM yyyy') : 'N/A';
-  const checkOutDate = dates.checkOut ? format(new Date(dates.checkOut), 'dd MMM yyyy') : 'N/A';
-
+  const grandTotal = totalPrice + extraBedCost + gstAmount + serviceFee;
+  
   return (
-    <div className='flex flex-col gap-4 shadow-md rounded-2xl bg-white '>
-       <div className="img-div flex w-full">
-            <img className='rounded-t-2xl object-cover h-48 w-full' src="https://images.pexels.com/photos/271639/pexels-photo-271639.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1" alt="Hotel Lobby" />
-       </div>
+    <div className="max-w-sm rounded-xl bg-white font-sans shadow-lg overflow-hidden ">
+      <img
+        className="w-full h-48 object-cover"
+        src="https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=1925&auto=format&fit=crop"
+        alt="A hand opening a hotel room door"
+      />
+      <div className="p-6">
+        {/* Top section is unchanged */}
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Your Stay Summary</h2>
+          <p className="mt-1 text-sm text-gray-500">{totalRooms} Room{totalRooms !== 1 ? 's' : ''} Selected</p>
+          <p className="mt-3 text-sm text-gray-800">
+            {formatDate(checkIn)} - {formatDate(checkOut)}
+          </p>
+          <p className="text-sm text-gray-800">
+            {nights > 0 ? nights : '0'} Night{nights !== 1 ? 's' : ''}
+          </p>
+          <p className="mt-2 cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+            &larr; Edit Stay Details
+          </p>
+        </div>
 
-       <div className="textdata flex flex-col px-6 pt-4 space-y-2 w-full">
-          <div>
-               <p className='text-2xl font-semibold'>Your Stay Summary</p>
-               <p className='text-gray-500 font-medium text-sm'>{roomCount} {roomCount > 1 ? 'Rooms' : 'Room'} Booked</p>
+        <hr className="my-4" />
+
+        <div>
+          {/* Room breakdown is unchanged */}
+          <div className="space-y-2">
+            {rooms.map(item => (
+              <div key={item.roomId} className="flex items-center justify-between text-sm">
+                <p className="text-blue-600 pr-2">{item.quantity} x {item.title}</p>
+                <p className="font-medium text-gray-700 whitespace-nowrap">
+                  {formatCurrency(item.quantity * item.pricePerNight * nights)}
+                </p>
+              </div>
+            ))}
           </div>
-           
-           <div className='flex gap-0 my-2 font-medium flex-col'>
-                <div className="date-see flex gap-1.5 mb-0">
-                    <p>{checkInDate}</p><span>-</span>
-                    <p>{checkOutDate}</p>
+          
+          <hr className="my-4 border-t border-dotted border-gray-300" />
+          
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-gray-600">Total Room Cost</p>
+              <p className="font-medium text-gray-800">{formatCurrency(totalPrice)}</p>
+            </div>
+            
+            {/* +++ NEW: Conditionally render the Extra Guest Fee line item +++ */}
+            {extraBedCost > 0 && (
+                <div className="flex items-center justify-between">
+                    <p className="text-gray-600">Extra Guest Fee</p>
+                    <p className="font-medium text-gray-800">{formatCurrency(extraBedCost)}</p>
                 </div>
+            )}
 
-               <div className="guest-count flex gap-2.5 mb-0">
-                    <p>{dates.nights} Night{dates.nights > 1 ? 's' : ''}</p>
-                    <p>Guests: {totalGuests}</p>
-               </div>
-           </div>
+            <div className="flex items-center justify-between">
+              <p className="text-gray-600">GST (12%)</p>
+              <p className="font-medium text-gray-800">{formatCurrency(gstAmount)}</p>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-gray-600">Service Fee</p>
+              <p className="font-medium text-gray-800">{formatCurrency(serviceFee)}</p>
+            </div>
+          </div>
 
-           <div className='text-gray-500 italic font-medium text-[12px] mt-1'>
-                <p> ← <Link to="/" className="hover:underline">Edit Stay Details</Link></p>
-           </div>
-       </div>
+          <hr className="my-4" />
 
-       <div className='my-2 flex justify-center px-6'>
-         <hr className='w-full' />
-       </div>
-
-       <div className='flex flex-col gap-2 px-6 pb-4'>
-           <h3 className='font-semibold text-lg'>Charges Summary</h3>
-
-           {/* --- CHANGE: Dynamically list each room type from the cart --- */}
-           {rooms.map((room) => (
-             <div key={room.roomId} className='flex justify-between text-indigo-600 text-sm '>
-                <p>{room.quantity} x {room.title}</p>
-                <p>₹{(room.quantity * room.pricePerNight * dates.nights).toLocaleString('en-IN')}</p>
-             </div>
-           ))}
-           {/* --- End of Change --- */}
-
-           <hr className='my-1 border-dashed' />
-
-           <div className='flex justify-between text-gray-800 font-medium'>
-                <p>Total Room Cost</p>
-                <p>₹{basePrice.toLocaleString('en-IN')}</p>
-           </div>
-
-           <div className='flex justify-between text-gray-600'>
-                <p>GST (12%)</p>
-                <p>₹{taxes.toFixed(0).toLocaleString('en-IN')}</p>
-           </div>
-           <div className='flex justify-between text-gray-600'>
-                <p>Service Fee</p>
-                <p>₹{serviceFee.toLocaleString('en-IN')}</p>
-           </div>
-           <hr className='my-2' />
-           <div className='flex justify-between font-bold text-black'>
-                <p>Grand Total</p>
-                <p className='text-indigo-600'>₹{grandTotal.toFixed(0).toLocaleString('en-IN')}</p>
-           </div>
-       </div>
+          <div className="flex items-center justify-between">
+            <p className="text-lg font-bold text-gray-900">Grand Total</p>
+            <p className="text-lg font-bold text-gray-900">{formatCurrency(grandTotal)}</p>
+          </div>
+        </div>
+      </div>
     </div>
-  )
+  );
 }
 
 export default Costcard;
-

@@ -1,370 +1,168 @@
-import React, { useState, useContext, useRef } from 'react';
-import { useLocation, useNavigate, UNSAFE_NavigationContext as NavigationContext } from 'react-router-dom';
+// src/components/Guestinfo.jsx
 
-// --- SVG Icon Components ---
-const KeyIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-gray-600"><circle cx="7.5" cy="15.5" r="5.5"></circle><path d="m21 2-9.6 9.6"></path><path d="m15.5 7.5 3 3L22 7l-3-3"></path></svg>);
+import React, { useState, useEffect } from 'react';
 
-// --- Reusable InputField Component (Moved to top level) ---
-// By defining it here, it is not recreated on every render of the parent component.
-const InputField = ({ id, label, type = "text", placeholder, value, onChange, error }) => (
-    <div>
-        <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-        <input 
-            type={type} id={id} name={id} 
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${error ? 'border-red-500' : 'border-gray-300'}`} 
-            placeholder={placeholder} value={value} onChange={onChange}
-        />
-        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-    </div>
-);
-
-// --- Helper function to create a new adult guest object ---
-const createAdultGuest = (uniqueId) => ({
-    uniqueId,
-    fullName: '',
-    email: '',
-    phone: '',
-});
-
-// --- Helper function to generate initial state for guests distributed in rooms ---
-const generateInitialRoomGuestsState = (roomsData = [], guestsData = { adults: 1, children: 0 }) => {
-    const allIndividualRooms = [];
-    roomsData.forEach(room => {
-        for (let i = 0; i < room.quantity; i++) {
-            allIndividualRooms.push({
-                uniqueRoomId: `${room.roomId}-${i}`,
-                roomTitle: room.title,
-                roomNumber: i + 1,
-                adults: [],
-                children: [],
-                maxCapacity: room.maxCapacity || 2,
-            });
-        }
-    });
-
-    if (allIndividualRooms.length === 0) return [];
-
-    for (let i = 0; i < guestsData.adults; i++) {
-        const leastOccupiedRoom = allIndividualRooms
-            .filter(r => (r.adults.length + r.children.length) < r.maxCapacity)
-            .sort((a, b) => (a.adults.length + a.children.length) - (b.adults.length + b.children.length))[0];
-        
-        if (leastOccupiedRoom) {
-            const adultIdx = leastOccupiedRoom.adults.length;
-            leastOccupiedRoom.adults.push(createAdultGuest(`adult-${leastOccupiedRoom.uniqueRoomId}-${adultIdx}`));
-        } else {
-            break;
-        }
-    }
-
-    for (let i = 0; i < guestsData.children; i++) {
-        let targetRoom = allIndividualRooms
-            .filter(r => r.adults.length > 0 && (r.adults.length + r.children.length) < r.maxCapacity)
-            .sort((a, b) => (a.adults.length + a.children.length) - (b.adults.length + b.children.length))[0];
-
-        if (!targetRoom) {
-            targetRoom = allIndividualRooms
-                .filter(r => (r.adults.length + r.children.length) < r.maxCapacity)
-                .sort((a, b) => (a.adults.length + a.children.length) - (b.adults.length + b.children.length))[0];
-        }
-        
-        if (targetRoom) {
-            const childIdx = targetRoom.children.length;
-            targetRoom.children.push({ uniqueId: `child-${targetRoom.uniqueRoomId}-${childIdx}`, fullName: '', age: '' });
-        } else {
-            break;
-        }
-    }
-    
-    allIndividualRooms.forEach(room => {
-        if (room.adults.length === 0 && room.children.length > 0) {
-            const donorRoom = allIndividualRooms.find(r => r.adults.length > 1);
-            if (donorRoom && (room.adults.length + room.children.length) < room.maxCapacity) {
-                const adultToMove = donorRoom.adults.pop();
-                room.adults.push(adultToMove);
-            }
-        }
-    });
-
-    return allIndividualRooms;
-};
-
-
-// --- Presentational Component: Contains all UI and logic but no router hooks ---
-function GuestInfoFormView({ initialBookingDetails, navigate }) {
-    // --- State Management ---
-    const [bookingData] = useState(initialBookingDetails);
-    const [roomGuests, setRoomGuests] = useState(() => generateInitialRoomGuestsState(bookingData.rooms, bookingData.guests));
+// The component now takes an onGuestInfoChange prop to lift its state up.
+const Guestinfo = ({ guestInfoData, onGuestInfoChange }) => {
+    const [guestDetails, setGuestDetails] = useState({});
+    const [primaryContactName, setPrimaryContactName] = useState('');
+    const [applyToAll, setApplyToAll] = useState(false);
     const [specialRequests, setSpecialRequests] = useState('');
-    const [errors, setErrors] = useState({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    const nextGuestId = useRef(0);
-    
-    // --- Handlers ---
-    const handleGuestCountChangeInRoomGroup = (roomTitle, guestType, amount) => {
-        setRoomGuests(prevRoomGuests => {
-            const newRoomGuests = JSON.parse(JSON.stringify(prevRoomGuests));
-            
-            const totalRooms = newRoomGuests.length;
-            const totalAdults = newRoomGuests.reduce((sum, r) => sum + r.adults.length, 0);
-    
-            const roomsInGroup = newRoomGuests
-                .map((room, index) => ({
-                    ...room,
-                    originalIndex: index,
-                    occupancy: room.adults.length + room.children.length,
-                }))
-                .filter(r => r.roomTitle === roomTitle);
-    
-            if (roomsInGroup.length === 0) {
-                return prevRoomGuests;
-            }
-    
-            if (amount === 1) {
-                const roomToAddGuestTo = roomsInGroup
-                    .filter(r => r.occupancy < r.maxCapacity)
-                    .sort((a, b) => a.roomNumber - b.roomNumber)[0];
-    
-                if (!roomToAddGuestTo) {
-                    return prevRoomGuests;
-                }
 
-                const newId = `dynamic-${nextGuestId.current++}`;
-    
-                if (guestType === 'adults') {
-                    newRoomGuests[roomToAddGuestTo.originalIndex].adults.push(createAdultGuest(`adult-${newId}`));
-                } else {
-                    newRoomGuests[roomToAddGuestTo.originalIndex].children.push({ uniqueId: `child-${newId}`, fullName: '', age: '' });
-                }
-    
-            } else if (amount === -1) {
-                if (guestType === 'adults') {
-                    if (totalAdults <= totalRooms) {
-                        return prevRoomGuests;
-                    }
-                    const roomsWithAdults = roomsInGroup.filter(r => r.adults.length > 0);
-                    if (roomsWithAdults.length === 0) { return prevRoomGuests; }
-                    roomsWithAdults.sort((a, b) => b.adults.length - a.adults.length);
-                    const roomToRemoveFrom = roomsWithAdults[0];
-                    newRoomGuests[roomToRemoveFrom.originalIndex].adults.pop();
-    
-                } else {
-                    const roomsWithChildren = roomsInGroup.filter(r => r.children.length > 0);
-                    if (roomsWithChildren.length === 0) { return prevRoomGuests; }
-                    roomsWithChildren.sort((a, b) => b.roomNumber - a.roomNumber);
-                    const roomToRemoveFrom = roomsWithChildren[0];
-                    newRoomGuests[roomToRemoveFrom.originalIndex].children.pop();
-                }
-            }
-    
-            return newRoomGuests;
-        });
-    };
-
-    const handleGuestInfoChange = (roomIndex, guestType, guestIndex, field, value) => {
-        setRoomGuests(prevRoomGuests => {
-            return prevRoomGuests.map((room, rIndex) => {
-                if (rIndex !== roomIndex) {
-                    return room;
-                }
-
-                const updatedGuests = room[guestType].map((guest, gIndex) => {
-                    if (gIndex !== guestIndex) {
-                        return guest;
-                    }
-                    return { ...guest, [field]: value };
-                });
-
-                return { ...room, [guestType]: updatedGuests };
-            });
-        });
-
-        const errorKey = `${roomIndex}-${guestType}-${guestIndex}-${field}`;
-        if (errors[errorKey]) {
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                delete newErrors[errorKey];
-                return newErrors;
+    // Initializes the state when guestInfoData is available.
+    useEffect(() => {
+        const initialState = {};
+        if (guestInfoData) {
+            guestInfoData.forEach(({ instanceId }) => {
+                initialState[instanceId] = { guestName: '' };
             });
         }
-    };
+        setGuestDetails(initialState);
+    }, [guestInfoData]);
 
-    const validateForm = () => {
-        const newErrors = {};
-        let isValid = true;
-        roomGuests.forEach((room, roomIndex) => {
-            room.adults.forEach((guest, guestIndex) => {
-                if (!guest.fullName.trim()) { newErrors[`${roomIndex}-adults-${guestIndex}-fullName`] = "Full name is required."; isValid = false; }
-                if (!guest.email || !guest.email.trim()) { newErrors[`${roomIndex}-adults-${guestIndex}-email`] = "Email is required."; isValid = false; } 
-                else if (!/\S+@\S+\.\S+/.test(guest.email)) { newErrors[`${roomIndex}-adults-${guestIndex}-email`] = "Email address is invalid."; isValid = false; }
-                if (!guest.phone || !guest.phone.trim()) { newErrors[`${roomIndex}-adults-${guestIndex}-phone`] = "Phone number is required."; isValid = false; } 
-                else if (!/^[0-9\b]+$/.test(guest.phone) || guest.phone.length < 10 || guest.phone.length > 15) { newErrors[`${roomIndex}-adults-${guestIndex}-phone`] = "Phone number is invalid."; isValid = false; }
-            });
-            room.children.forEach((guest, guestIndex) => {
-                if (!guest.fullName.trim()) { newErrors[`${roomIndex}-children-${guestIndex}-fullName`] = "Full name is required."; isValid = false; }
-                if (guest.age === '' || guest.age === null) { newErrors[`${roomIndex}-children-${guestIndex}-age`] = "Age is required."; isValid = false; } 
-                else if (isNaN(guest.age) || guest.age < 0 || guest.age > 17) { newErrors[`${roomIndex}-children-${guestIndex}-age`] = "Enter a valid age (0-17)."; isValid = false; }
-            });
-        });
-        setErrors(newErrors);
-        return isValid;
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (validateForm()) {
-            setIsSubmitting(true);
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            const finalBookingData = { 
-                guestInfoByRoom: roomGuests, 
-                specialRequests, 
-                bookingSummary: {
-                    ...bookingData,
-                    guests: {
-                        adults: roomGuests.reduce((sum, r) => sum + r.adults.length, 0),
-                        children: roomGuests.reduce((sum, r) => sum + r.children.length, 0)
-                    }
-                }, 
-                bookingDate: new Date().toISOString() 
-            };
-            console.log('Proceeding to Payment with:', finalBookingData);
-            setIsSubmitting(false);
-            if(navigate) {
-                navigate('/payment', { state: { booking: finalBookingData } });
-            }
+    // +++ NEW: Auto-submits data on change +++
+    // This useEffect hook calls the onGuestInfoChange callback whenever the
+    // guest details or special requests are updated, effectively "auto-submitting"
+    // the data to the parent component.
+    useEffect(() => {
+        if (onGuestInfoChange) {
+            onGuestInfoChange({ guestDetails, specialRequests });
         }
-    };  
-    
-    const groupedRooms = roomGuests.reduce((acc, room) => {
-        (acc[room.roomTitle] = acc[room.roomTitle] || []).push(room);
-        return acc;
-    }, {});
+    }, [guestDetails, specialRequests, onGuestInfoChange]);
 
+
+    // Effect for "Apply to All" checkbox.
+    useEffect(() => {
+        if (applyToAll) {
+            setGuestDetails(prevDetails => {
+                const newDetails = { ...prevDetails };
+                for (const instanceId in newDetails) {
+                    newDetails[instanceId] = { guestName: primaryContactName };
+                }
+                return newDetails;
+            });
+        }
+    }, [primaryContactName, applyToAll]);
+
+    const handleNameChange = (instanceId, value) => {
+        setGuestDetails(prevDetails => ({
+            ...prevDetails,
+            [instanceId]: { ...prevDetails[instanceId], guestName: value },
+        }));
+    };
+    
+    const handleApplyToAllChange = (e) => {
+        setApplyToAll(e.target.checked);
+    };
+
+    if (!guestInfoData || guestInfoData.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center p-8 text-center bg-white rounded-2xl shadow-lg mt-4 max-w-2xl mx-auto">
+                <h3 className="text-2xl font-bold text-gray-800">Guest Information</h3>
+                <p className="mt-2 text-gray-500">Guest data not found. Please specify the number of guests first.</p>
+            </div>
+        );
+    }
+    
     return (
-        <div className="bg-gray-50 min-h-screen font-sans">
-            <div className="container mx-auto sm:px-4 ">
-                <div className="max-w-8xl ">
-                    <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
-                        <form onSubmit={handleSubmit} noValidate>
-                            {Object.entries(groupedRooms).map(([roomTitle, rooms]) => {
-                                const totalAdultsInGroup = rooms.reduce((sum, r) => sum + r.adults.length, 0);
-                                const totalChildrenInGroup = rooms.reduce((sum, r) => sum + r.children.length, 0);
-                                const totalGuestsInGroup = totalAdultsInGroup + totalChildrenInGroup;
-                                
-                                const roomData = bookingData.rooms.find(r => r.title === roomTitle);
-                                const maxCapacityPerRoom = roomData?.maxCapacity || 2;
-                                const totalCapacityInGroup = maxCapacityPerRoom * rooms.length;
-
-                                const totalAdultsInBooking = roomGuests.reduce((sum, r) => sum + r.adults.length, 0);
-                                const totalRoomsInBooking = roomGuests.length;
-                                
-                                return (
-                                <div key={roomTitle} className="mb-8 last:mb-0">
-                                    <div className="pb-2 mb-4 border-b-2 border-indigo-200">
-                                        <h2 className="text-3xl font-semibold text-black-700">Fill The Guest Information</h2>
-                                    
-                                        <h2 className="text-2xl font-bold text-indigo-700">{roomTitle}</h2>
-                                        <div className="flex flex-col sm:flex-row justify-start items-center text-center gap-x-6 gap-y-2 mt-2">
-                                            <div className="flex items-center gap-4 w-full sm:w-auto justify-between">
-                                                <p className="font-semibold text-gray-800 text-sm">Adults</p>
-                                                <div className="flex items-center space-x-2">
-                                                    <button type="button" onClick={() => handleGuestCountChangeInRoomGroup(roomTitle, 'adults', -1)} disabled={totalAdultsInGroup === 0 || totalAdultsInBooking <= totalRoomsInBooking} className="h-7 w-7 rounded-full border flex items-center justify-center text-md hover:bg-gray-100 disabled:opacity-50">-</button>
-                                                    <span className="w-6 text-center font-bold text-md">{totalAdultsInGroup}</span>
-                                                    <button type="button" onClick={() => handleGuestCountChangeInRoomGroup(roomTitle, 'adults', 1)} disabled={totalGuestsInGroup >= totalCapacityInGroup} className="h-7 w-7 rounded-full border flex items-center justify-center text-md hover:bg-gray-100 disabled:opacity-50">+</button>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-4 w-full sm:w-auto justify-between">
-                                                <p className="font-semibold text-gray-800 text-sm">Children</p>
-                                                <div className="flex items-center space-x-2">
-                                                    <button type="button" onClick={() => handleGuestCountChangeInRoomGroup(roomTitle, 'children', -1)} disabled={totalChildrenInGroup === 0} className="h-7 w-7 rounded-full border flex items-center justify-center text-md hover:bg-gray-100 disabled:opacity-50">-</button>
-                                                    <span className="w-6 text-center font-bold text-md">{totalChildrenInGroup}</span>
-                                                    <button type="button" onClick={() => handleGuestCountChangeInRoomGroup(roomTitle, 'children', 1)} disabled={totalGuestsInGroup >= totalCapacityInGroup} className="h-7 w-7 rounded-full border flex items-center justify-center text-md hover:bg-gray-100 disabled:opacity-50">+</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {rooms.map(room => {
-                                        const originalRoomIndex = roomGuests.findIndex(r => r.uniqueRoomId === room.uniqueRoomId);
-                                        return (
-                                            <div key={room.uniqueRoomId} className="mb-6 border border-gray-200 rounded-lg p-4 bg-gray-50/50">
-                                                <h3 className="text-lg font-semibold text-gray-800 mb-4">{rooms.length > 1 ? `Room #${room.roomNumber}` : 'Guest Details'}</h3>
-                                                {room.adults.map((guest, guestIndex) => {
-                                                    const isPrimaryContact = originalRoomIndex === 0 && guestIndex === 0;
-                                                    return (
-                                                        <div key={guest.uniqueId} className="pt-4 border-t border-gray-200 first:border-t-0 first:pt-0">
-                                                            <p className="font-medium text-gray-600 mb-2">{isPrimaryContact ? 'Primary Contact' : `Adult #${guestIndex + 1}`}</p>
-                                                            <div className="mb-4"><InputField id={`${guest.uniqueId}-fullName`} label="Full Name" placeholder="John Doe" value={guest.fullName} onChange={(e) => handleGuestInfoChange(originalRoomIndex, 'adults', guestIndex, 'fullName', e.target.value)} error={errors[`${originalRoomIndex}-adults-${guestIndex}-fullName`]}/></div>
-                                                            <div className="mb-4"><InputField id={`${guest.uniqueId}-email`} label="Email Address" type="email" placeholder="you@example.com" value={guest.email} onChange={(e) => handleGuestInfoChange(originalRoomIndex, 'adults', guestIndex, 'email', e.target.value)} error={errors[`${originalRoomIndex}-adults-${guestIndex}-email`]}/></div>
-                                                            <div className="mb-4"><InputField id={`${guest.uniqueId}-phone`} label="Phone Number" type="number" placeholder="+91 12345 67890" value={guest.phone} onChange={(e) => handleGuestInfoChange(originalRoomIndex, 'adults', guestIndex, 'phone', e.target.value)} error={errors[`${originalRoomIndex}-adults-${guestIndex}-phone`]}/></div>
-                                                        </div>
-                                                    )
-                                                })}
-                                                {room.children.map((guest, guestIndex) => (
-                                                    <div key={guest.uniqueId} className="pt-4 border-t border-gray-200">
-                                                        <p className="font-medium text-gray-600 mb-2">{`Child #${guestIndex + 1}`}</p>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-                                                          <div className="sm:col-span-2"><InputField id={`${guest.uniqueId}-fullName`} label="Full Name" placeholder="Jane Doe" value={guest.fullName} onChange={(e) => handleGuestInfoChange(originalRoomIndex, 'children', guestIndex, 'fullName', e.target.value)} error={errors[`${originalRoomIndex}-children-${guestIndex}-fullName`]}/></div>
-                                                          <div><InputField id={`${guest.uniqueId}-age`} label="Age" type="number" placeholder="8" value={guest.age} onChange={(e) => handleGuestInfoChange(originalRoomIndex, 'children', guestIndex, 'age', e.target.value)} error={errors[`${originalRoomIndex}-children-${guestIndex}-age`]}/></div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                                )})}
-                            <div className="mt-8 pt-6 border-t border-gray-200">
-                                <label htmlFor="requests" className="block text-sm font-medium text-gray-700 mb-1">Special Requests (Optional)</label>
-                                <textarea id="requests" name="requests" rows="4" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="e.g., late check-in, room preference" value={specialRequests} onChange={(e) => setSpecialRequests(e.target.value)}></textarea>
-                            </div>
-                            <button type="submit" className="w-full mt-6 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-wait focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all flex items-center justify-center" disabled={isSubmitting}>
-                                {isSubmitting ? (<><svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Processing...</>) : ('Confirm & Proceed to Payment')}
-                            </button>
-                        </form>
+        // --- REMOVED: <form> and onSubmit handler ---
+        <div className="w-full max-w-3xl mx-auto p-4 font-sans">
+            <div className="w-full bg-white rounded-2xl shadow-xl p-6 sm:p-8 space-y-8">
+                {/* Primary Contact Section */}
+                <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center">Guest Information</h1>
+                    <p className="text-sm sm:text-base text-gray-500 mt-2 text-center">Please provide one guest name for each room.</p>
+                </div>
+                <div className="p-5 border border-gray-200 rounded-xl bg-gray-50">
+                    <h2 className="text-lg font-semibold text-gray-800 mb-4">Primary Booking Contact</h2>
+                    <div className="mb-4">
+                        <label htmlFor="primaryContact" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                        <input
+                            type="text"
+                            id="primaryContact"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            placeholder="e.g., Jane Doe"
+                            value={primaryContactName}
+                            onChange={(e) => setPrimaryContactName(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex items-center">
+                        <input
+                            type="checkbox"
+                            id="applyToAllRooms"
+                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                            checked={applyToAll}
+                            onChange={handleApplyToAllChange}
+                        />
+                        <label htmlFor="applyToAllRooms" className="ml-2 block text-sm text-gray-800">
+                            Use this name for all rooms.
+                        </label>
                     </div>
                 </div>
+
+                {/* Guest Name Inputs */}
+                <div className="space-y-6">
+                    {guestInfoData.map(({ instanceId, title, counts, childrenAges }) => {
+                        const lastUnderscoreIndex = instanceId.lastIndexOf('_');
+                        const instanceNum = instanceId.slice(lastUnderscoreIndex + 1);
+
+                        return (
+                            <div key={instanceId} className="p-5 border border-gray-200 rounded-xl shadow-sm">
+                                <h3 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-3 mb-4">
+                                    {title} #{parseInt(instanceNum) + 1}
+                                </h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label htmlFor={`guest-name-${instanceId}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                            Guest Full Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id={`guest-name-${instanceId}`}
+                                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                            placeholder="Full Name"
+                                            value={guestDetails[instanceId]?.guestName || ''}
+                                            onChange={(e) => handleNameChange(instanceId, e.target.value)}
+                                            disabled={applyToAll}
+                                            required
+                                        />
+                                    </div>
+
+                                    {counts.children > 0 && (
+                                        <div className="pt-2">
+                                            <p className="block text-sm font-medium text-gray-700">
+                                                Guest Count: {counts.adults} Adult{counts.adults > 1 ? 's' : ''} & {counts.children} Child{counts.children > 1 ? 'ren' : ''}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                (Children's Ages: {childrenAges?.join(', ') || 'N/A'})
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Special Requests */}
+                <div>
+                    <label htmlFor="specialRequests" className="block text-lg font-semibold text-gray-800 mb-3">
+                        Special Requests (Optional)
+                    </label>
+                    <textarea
+                        id="specialRequests"
+                        rows="4"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm resize-y"
+                        placeholder="e.g., late check-in, room preference, food allergies"
+                        value={specialRequests}
+                        onChange={(e) => setSpecialRequests(e.target.value)}
+                    ></textarea>
+                </div>
+                
+                {/* --- REMOVED: "Continue to Payment" button --- */}
             </div>
         </div>
     );
-}
+};
 
-// --- Wrapper Component: Connects the view to React Router ---
-function ConnectedGuestInfoForm() {
-    const location = useLocation();
-    const navigate = useNavigate();
-    const initialBookingDetails = location.state?.bookingDetails;
-    // Fallback for testing if no booking details are passed
-    const defaultBookingDetails = {
-        rooms: [{ roomId: "mock1", title: 'Deluxe Room', quantity: 2, maxCapacity: 2 }],
-        guests: { adults: 2, children: 0 },
-    };
-    return <GuestInfoFormView initialBookingDetails={initialBookingDetails || defaultBookingDetails} navigate={navigate} />;
-}
-
-// --- Main Export: Decides whether to render the real component or a fallback ---
-export default function Guestinfo() {
-    const hasRouterContext = useContext(NavigationContext) !== null;
-
-    if (hasRouterContext) {
-        // If inside a Router, render the component that uses hooks
-        return <ConnectedGuestInfoForm />;
-    }
-
-    // Otherwise, render the view with mock data for preview purposes (e.g., in Storybook)
-    const mockNavigate = (path, options) => {
-        console.log(`[Mock Navigate] to: ${path} with state:`, options?.state);
-        alert(`Would navigate to ${path}`);
-    };
-    const mockBookingDetails = {
-        rooms: [
-            { roomId: "1", title: 'Standard Room', quantity: 2, maxCapacity: 2 }, 
-            { roomId: "2", title: 'Deluxe Room', quantity: 1, maxCapacity: 4 },
-            { roomId: "3", title: 'Ultra Deluxe Room', quantity: 1, maxCapacity: 6 }
-        ],
-        guests: { adults: 3, children: 1 },
-    };
-
-    return <GuestInfoFormView initialBookingDetails={mockBookingDetails} navigate={mockNavigate} />;
-}
+export default Guestinfo;

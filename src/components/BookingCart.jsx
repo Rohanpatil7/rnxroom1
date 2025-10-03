@@ -1,70 +1,90 @@
-import React from 'react';
+// src/components/BookingCart.jsx
+
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+// Define a key to be shared with GuestCounter
+const BOOKING_DETAILS_KEY = 'currentBookingDetails';
 
 const BookingCart = ({ cart, bookingDetails, onRemove, onAdd, totalPrice }) => {
     const navigate = useNavigate();
 
-    if (cart.length === 0) {
-        return null;
-    }
-
     const totalNights = bookingDetails.nights > 0 ? bookingDetails.nights : 0;
 
-    // This is the onBookNow function for this component.
-    // It now contains the logic to gather the booking data and redirect the user.
-    const handleBookNow = () => {
-        if (totalNights === 0 || cart.length === 0) {
-            console.error("Booking cannot proceed: Dates not selected or cart is empty.");
-            return;
-        }
-
-        const finalBookingDetails = {
+    /**
+     * This effect syncs the current booking details with sessionStorage
+     * whenever the cart, dates, or total price change. This allows the GuestCounter
+     * component to always have the most up-to-date information.
+     */
+    useEffect(() => {
+        const currentBookingDetails = {
             rooms: cart.map(item => ({
-                roomId: item.room._id,
+                // +++ FIX +++
+                // Use the room's '_id' or 'id' property to ensure a valid ID is always captured.
+                // This is the most common source of the "title not found" error.
+                roomId: item.room._id || item.room.id,
                 title: item.room.title,
                 quantity: item.quantity,
-                pricePerNight: item.room.pricePerNight
+                pricePerNight: item.room.pricePerNight,
+                room: {
+                    maxOccupancy: item.room.maxOccupancy
+                }
             })),
             dates: {
                 checkIn: bookingDetails.checkIn,
                 checkOut: bookingDetails.checkOut,
                 nights: totalNights,
             },
-            // NEW: Add the guest counts selected on the previous page.
             guests: {
                 adults: bookingDetails.adults,
                 children: bookingDetails.children,
             },
             totalPrice: totalPrice,
         };
+        
+        // Save the latest details to session storage for GuestCounter to use.
+        sessionStorage.setItem(BOOKING_DETAILS_KEY, JSON.stringify(currentBookingDetails));
 
-        console.log("Redirecting to booking page with details:", finalBookingDetails);
-        navigate('/booking/new', { state: { bookingDetails: finalBookingDetails } });
+    }, [cart, bookingDetails, totalPrice, totalNights]);
+
+
+    const handleBookNow = () => {
+        if (totalNights === 0 || cart.length === 0) {
+            console.error("Booking cannot proceed: Dates not selected or cart is empty.");
+            return;
+        }
+        
+        const bookingData = JSON.parse(sessionStorage.getItem(BOOKING_DETAILS_KEY));
+        console.log("Redirecting to guest details page with data:", bookingData);
+        
+        navigate('/booking/new', { state: { bookingDetails: bookingData } });
     };
+
+    if (cart.length === 0) {
+        return null;
+    }
 
     return (
         <div className="fixed bottom-0 left-0 right-0 bg-gray-900 text-white shadow-[0_-4px_10px_-1px_rgba(0,0,0,0.2)] z-20">
-            <div className="container mx-auto p-4 lg:px-24 md:px-16 sm:px-8">
-                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="container mx-auto p-2 md:p-4 lg:px-24 md:px-16 sm:px-4">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-2 md:gap-4">
+                    
                     <div className="flex-grow w-full md:w-auto">
                         <h3 className="text-lg font-semibold mb-2 text-gray-300 hidden md:block">Your Selection</h3>
-                        <div className="flex  items-center gap-4 overflow-x-auto pb-2">
+                        <div className="flex items-center gap-2 overflow-x-auto pb-2 ">
                             {cart.map(item => (
-                                <div key={item.room._id} className="bg-gray-700 rounded-lg p-3 flex-shrink-0 flex flex-col items-center gap-4">
+                                <div key={item.room._id || item.room.id} className="bg-gray-700 rounded-lg p-2 flex-shrink-0 flex flex-col items-center gap-2 over">
                                     <div className='flex flex-col gap-1 items-center' >
-                                        <p className="font-bold whitespace-nowrap">{item.room.title}</p>
-                                        <p className="text-sm text-gray-400">
+                                        <p className="text-sm md:text-base font-bold whitespace-wrap">{item.room.title}</p>
+                                        <p className="text-xs md:text-sm text-gray-400">
                                             ₹{item.room.pricePerNight.toLocaleString('en-IN')}
                                         </p>
-
                                         <div className="flex items-center gap-2 bg-gray-800 rounded-full px-2">
-                                        <button onClick={() => onRemove(item.room)} className="text-white font-bold text-lg w-6 h-6 rounded-full flex items-center justify-center hover:bg-gray-600 transition-colors" aria-label={`Decrease quantity of ${item.room.title}`}>-</button>
-                                        <span className='font-medium text-lg'>{item.quantity}</span>
-                                        <button onClick={() => onAdd(item.room)} className="text-white font-bold text-lg w-6 h-6 rounded-full flex items-center justify-center hover:bg-gray-600 transition-colors disabled:opacity-50" aria-label={`Increase quantity of ${item.room.title}`} disabled={item.quantity >= item.room.remainingRooms}>+</button>
+                                            <button onClick={() => onRemove(item.room)} className="text-white font-bold text-base w-5 h-5 sm:text-lg sm:w-6 sm:h-6 rounded-full flex items-center justify-center hover:bg-gray-600 transition-colors cursor-pointer" aria-label={`Decrease quantity of ${item.room.title}`}>-</button>
+                                            <span className='font-medium text-base sm:text-lg'>{item.quantity}</span>
+                                            <button onClick={() => onAdd(item.room)} className="text-white font-bold text-base w-5 h-5 sm:text-lg sm:w-6 sm:h-6 rounded-full flex items-center justify-center hover:bg-gray-600 transition-colors disabled:opacity-50 cursor-pointer" aria-label={`Increase quantity of ${item.room.title}`} disabled={item.quantity >= item.room.remainingRooms}>+</button>
                                         </div>
-
                                     </div>
-                                    
                                 </div>
                             ))}
                         </div>
@@ -74,13 +94,13 @@ const BookingCart = ({ cart, bookingDetails, onRemove, onAdd, totalPrice }) => {
                     
                     <div className="flex-shrink-0 flex items-center justify-between md:justify-center gap-4 w-full md:w-auto">
                          <div>
-                            <p className="text-xl font-bold text-right">Total: ₹{totalPrice.toLocaleString('en-IN')}</p>
-                            {totalNights > 0 && (<p className="text-sm text-gray-400 text-right">for {totalNights} {totalNights > 1 ? 'nights' : 'night'}</p>)}
-                            {totalNights === 0 && (<p className="text-sm text-yellow-400 font-semibold text-right">Please select dates.</p>)}
+                            <p className="text-lg md:text-xl font-bold text-right">Total: ₹{totalPrice.toLocaleString('en-IN')}</p>
+                            {totalNights > 0 && (<p className="text-xs md:text-sm text-gray-400 text-right">for {totalNights} {totalNights > 1 ? 'nights' : 'night'}</p>)}
+                            {totalNights === 0 && (<p className="text-xs md:text-sm text-yellow-400 font-semibold text-right">Please select dates.</p>)}
                         </div>
                         <button
                             onClick={handleBookNow} 
-                            className="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                            className="bg-indigo-600 text-white font-bold text-sm md:text-base py-2 px-5 md:py-3 md:px-8 rounded-full hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer"
                             disabled={totalNights === 0 || totalPrice === 0}
                         >
                             Book Now
@@ -93,4 +113,3 @@ const BookingCart = ({ cart, bookingDetails, onRemove, onAdd, totalPrice }) => {
 };
 
 export default BookingCart;
-

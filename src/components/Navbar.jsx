@@ -4,74 +4,81 @@ import { Link, useNavigate,useLocation } from "react-router-dom";
 // import assets from "../assets";
 import logo from "/hotelLUx.png";
 
-const Navbar = () => {
+const Navbar = ({hotelData}) => {
   const navLinks = [
-    // { name: "Home", path: "/" },
-    // { name: "Rooms", path: "/rooms" },
-    // { name: "Contact", path: "/" },
-    // { name: "About", path: "/" },
+    { name: "Home", path: "/" },
+    { name: "Rooms", path: "/allrooms" },
+    { name: "MY Bookings", path: "/booking/:id" },
+    { name: "payment", path: "/payment" },
   ];
 
 
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // const [isScrolled, setIsScrolled] = useState(false);
+  // const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
 
 
- useEffect(() => {
-  if (location.pathname === '/') {
-    setIsScrolled(true);
-    return;
-  } else {
-    setIsScrolled(false);
-  }
-  setIsScrolled(prev => location.pathname !== '/' ? true : prev);
+//  useEffect(() => {
+//   if (location.pathname === '/') {
+//     setIsScrolled(true);
+//     return;
+//   } else {
+//     setIsScrolled(false);
+//   }
+//   setIsScrolled(prev => location.pathname !== '/' ? true : prev);
 
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [location.pathname]);
+//     const handleScroll = () => {
+//       setIsScrolled(window.scrollY > 10);
+//     };
+//     window.addEventListener("scroll", handleScroll);
+//     return () => window.removeEventListener("scroll", handleScroll);
+//   }, [location.pathname]);
 
   return (
     <nav
-      className={`sticky top-0 left-0 bg-indigo-500 w-full flex items-center justify-between sm:px-4 md:px-24 lg:px-32 xl:px-32 transition-all duration-500 z-50 ${
-        isScrolled
-          ? "bg-white/80 shadow-md text-gray-700 backdrop-blur-lg py-3 md:py-4"
-          : "py-4 md:py-6"
-      }`}
+      className={`sticky h-18 align-baseline top-0  left-0 text-white bg-linear-to-t from-sky-500 to-indigo-500 w-full flex items-center justify-between sm:px-4 md:px-24 lg:px-32 xl:px-32 transition-all duration-500 z-50` }
+        // ${
+      //   isScrolled
+      //     ? "bg-white/80 shadow-md text-gray-700 backdrop-blur-lg py-3 md:py-4"
+      //     : "py-4 md:py-6"
+      // }`}
     >
       {/* Logo */}
-      <Link to={'/'} className={`h-16 items-center align-middel ${isScrolled && "invert opacity-100 "}`}>
+      <Link to={'/'} className={`h-24 items-center align-baseline `}>
+       {/* ${isScrolled && "invert opacity-100 "} */}
         <img
-          src={logo}
+          src={hotelData?.LogoUrl}
           alt="logo"
-          className={`h-18 justify-center align-middle ${isScrolled && "invert opacity-100 "}`}
+          className={`h-20 justify-center align-baseline items-center`}
+          //  ${isScrolled && "invert opacity-100 "}
         />
       </Link>
 
       {/* Desktop Nav */}
       <div className={`flex flex-col items-center gap-0.5 w-full md:w-auto sm:w-auto`}>
-        <h2 className={`text-3xl font-bold ${isScrolled ? 'text-black' : 'text-white'}`}>Xpress Hotel</h2>
-        <p className={`text-sm ${isScrolled ? 'text-black' : 'text-white'}`}>Kolhapur</p>
+        <h2 className={`text-3xl font-bold  `}>{hotelData?.HotelName}</h2>
+         {/* ${isScrolled ? 'text-black' : 'text-white'} */}
+        <p className={`text-sm `}>{hotelData?.Address}</p>
+        {/* ${isScrolled ? 'text-black' : 'text-white'} */}
       </div>
-      <div className="hidden md:flex items-center gap-4 lg:gap-8">
+      <div className="hidden md:flex items-center gap-4 lg:gap-8 ">
         {navLinks.map((link, i) => (
           <a
             key={i}
             href={link.path}
-            className={`group flex flex-col gap-0.5 ${
-              isScrolled ? "text-gray-700" : "text-white"
-            }`}
+            className={`group  flex-col gap-0.5 hidden`}
+            //  ${
+            //   isScrolled ? "text-gray-700" : "text-white"
+            // }
           >
             {link.name}
             <div
-              className={`${
-                isScrolled ? "bg-gray-700" : "bg-white"
-              } h-0.5 w-0 group-hover:w-full transition-all duration-300`}
+              className={` h-0.5 w-0 group-hover:w-full transition-all duration-300`}
+              // ${
+              //   isScrolled ? "bg-gray-700" : "bg-white"
+              // }
             />
           </a>
         ))}
