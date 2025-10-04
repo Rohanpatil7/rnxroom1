@@ -57,7 +57,7 @@ function Home({ hotelData, isBookingDisabled }) {
   return (
     <div>
       {/* Hero section is now a dynamic slider */}
-      <section className="relative h-[50vh] md:h-[600px]  w-full text-white bg-gray-800 ">
+      <section className="relative h-[50vh] md:h-[600px]  w-full text-white ">
         {hasImages ? (
           <>
             {/* Slider Background Images */}
@@ -118,72 +118,77 @@ function Home({ hotelData, isBookingDisabled }) {
         )}
       </section>
 
-      {/* Property Section */}
-      <div className="flex mt-4 flex-col h-full w-full md:px-4">
-        <div className="abiutprop">
-          <h1 className="text-3xl font-semibold text-center mx-auto" >
-            About our Property
-          </h1>
-          <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-center gap-8 px-4 md:px-0 py-10">
-            <img
-              className="max-w-sm w-full rounded-xl h-auto outline-3 outline-offset-2 outline-dashed outline-indigo-500"
-              src={hotelData?.HotelImages[0] || ""}
-              alt={hotelData?.HotelName || "Hotel"}
-            />
-            <div>
-              <p>{hotelData?.AboutHotel}</p>
-            </div>
-          </div>
+      {/* Main Content Section */}
+      <div className="flex mt-4 flex-col h-full w-full">
 
-          <div className="max-w-4xl mx-auto flex flex-col-reverse md:flex-row items-center justify-center gap-8 px-4 md:px-0 py-10">
-            <div>
-              <p>{hotelData?.AboutHotel}</p>
-            </div>
-            <img
-              className="max-w-sm w-full rounded-xl h-auto outline-3 outline-offset-2 outline-dashed outline-indigo-500"
-              src={hotelData?.HotelImages[1] || ""}
-              alt={hotelData?.HotelName || "Hotel"}
-            />
+        {/* --- MODIFIED SECTION: About Property & Facilities --- */}
+        <div className="max-w-7xl mx-auto w-full flex flex-col lg:flex-row gap-12 px-4 py-10">
             
-          </div>
-        </div>
-
-        {/* Amenities Section */}
-        {hotelData?.HotelAmenities && hotelData?.HotelAmenities.length > 0 && (
-          <div className="px-auto flex flex-col px-4 sm:px-12 md:px-24">
-            <h1 className="text-3xl font-semibold text-center mx-auto">Facilities We Provide</h1>
-            <div className="relative max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-8 sm:gap-12 md:gap-20 pt-16">
-              {hotelData?.HotelAmenities.map((amenity, index) => (
-                <div key={index} className="flex flex-col items-center text-center">
-                  <div className="size-18 p-2 bg-linear-to-t from-sky-500 to-indigo-500 rounded-lg">
-                    <img src={amenity.IconUrl} alt={amenity.Name} className="w-full h-full object-contain"/>
-                  </div>
-                  <div className="mt-4">
-                    <h3 className="text-sm font-medium text-slate-600">{amenity.Name}</h3>
-                  </div>
-                </div>
-              ))}
+            {/* About Property Section */}
+            <div className="lg:w-1/2 flex flex-col">
+                <h1 className="text-3xl font-semibold text-center  mb-6">
+                    About our Property
+                </h1>
+                <p className="text-gray-800 md:text-center sm:text-center ">
+                    {hotelData?.AboutHotel}
+                </p>
             </div>
-          </div>
-        )}
+
+            {/* Facilities Section */}
+            {hotelData?.HotelAmenities && hotelData?.HotelAmenities.length > 0 && (
+                <div className="lg:w-1/2">
+                    <h1 className="text-3xl font-semibold text-center mb-6">
+                        Facilities We Provide
+                    </h1>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-4 gap-y-8 justify-items-center">
+                        {hotelData?.HotelAmenities.map((amenity, index) => (
+                            <div key={index} className="flex flex-col items-center text-center">
+                                <div className="size-14 p-2  rounded-lg">
+                                    <img src={amenity.IconUrl} alt={amenity.Name} className="w-full h-full object-contain"/>
+                                </div>
+                                <div className="mt-2">
+                                    <h3 className="text-sm font-medium text-slate-600">{amenity.Name}</h3>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+        {/* --- END OF MODIFIED SECTION --- */}
 
         {/* Policies Section */}
         {hotelData?.HotelPolicies && hotelData?.HotelPolicies.length > 0 && (
-          <div className="px-4 sm:px-12 md:px-24 my-4">
-            <h3 className="text-3xl font-semibold text-center mx-auto py-8">Hotel Policies</h3>
-            <ul className="max-w-3xl mx-auto list-disc list-inside space-y-2 text-gray-600 text-left">
-              {hotelData?.HotelPolicies.map((policy, index) => (
-                <li key={index}>{policy}</li>
-              ))}
-            </ul>
-          </div>
-        )}
+  <div className="w-full py-12 px-4 sm:px-8 lg:px-16">
+    <h3 className="text-3xl font-semibold text-center mx-auto mb-8">Hotel Policies</h3>
+    {/* Policies are now in a responsive 2-column grid */}
+    <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-4 text-gray-700">
+      {hotelData?.HotelPolicies.map((policy, index) => (
+        <div key={index} className="flex items-start">
+          {/* Checkmark Icon */}
+          <svg className="w-5 h-5 text-indigo-500 mr-3 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span>{policy}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+)}  
 
         {/* Room Selection */}
         <div className="flex justify-between items-center px-4 sm:px-8 md:px-24 h-20 sticky bottom-0 bg-white shadow-[0_-4px_10px_-5px_rgba(0,0,0,0.1)] gap-4">
           <div className="flex-1">
             <p className="font-bold text-lg">Ready to book?</p>
-            <p className="text-sm text-gray-500">Select your dates to see available rooms.</p>
+            <p className="text-sm text-gray-500">{/* --- MODIFICATION START --- */}
+      {bookingDetails.checkIn && bookingDetails.checkOut ? (
+        <span className="font-medium text-indigo-600">
+          {`${new Date(bookingDetails.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(bookingDetails.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${bookingDetails.nights} Night${bookingDetails.nights !== 1 ? 's' : ''})`}
+        </span>
+      ) : (
+        'Select your dates to see available rooms.'
+      )}
+      {/* --- MODIFICATION END --- */}</p>
           </div>
           <div className="w-auto">
             <NavLink

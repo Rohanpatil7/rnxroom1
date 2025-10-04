@@ -38,7 +38,7 @@ const Navbar = ({hotelData}) => {
 
   return (
     <nav
-      className={`sticky h-18 align-baseline top-0  left-0 text-white bg-linear-to-t from-sky-500 to-indigo-500 w-full flex items-center justify-between sm:px-4 md:px-24 lg:px-32 xl:px-32 transition-all duration-500 z-50` }
+      className={`sticky h-18 align-baseline top-0  left-0 text-black bg-white w-full flex items-center justify-between sm:px-4 md:px-24 lg:px-32 xl:px-32 transition-all duration-500 z-50 cursor-default` }
         // ${
       //   isScrolled
       //     ? "bg-white/80 shadow-md text-gray-700 backdrop-blur-lg py-3 md:py-4"
@@ -58,7 +58,7 @@ const Navbar = ({hotelData}) => {
 
       {/* Desktop Nav */}
       <div className={`flex flex-col items-center gap-0.5 w-full md:w-auto sm:w-auto`}>
-        <h2 className={`text-3xl font-bold  `}>{hotelData?.HotelName}</h2>
+        <h2 className={`text-2xl font-bold  `}>{hotelData?.HotelName}</h2>
          {/* ${isScrolled ? 'text-black' : 'text-white'} */}
         <p className={`text-sm `}>{hotelData?.Address}</p>
         {/* ${isScrolled ? 'text-black' : 'text-white'} */}

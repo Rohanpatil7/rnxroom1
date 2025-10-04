@@ -1,3 +1,5 @@
+// src/App.jsx
+
 import React from 'react';
 import Navbar from './components/Navbar.jsx';
 // import Footer from './components/Footer.jsx';
@@ -57,7 +59,7 @@ function App() {
           <Route path='/allrooms' element={<AllRooms  hotelData={hotelData} loading={loading} error={error} setBookingDetails={setBookingDetails} />} />
 
           {/* 2. Pass the 'bookingDetails' state object to the Booking page.*/}
-          <Route path='/booking/:id' element={<Booking hotelData={hotelData} loading={loading} error={error} bookingDetails={bookingDetails}  />} /> */}
+          <Route path='/booking/new' element={<Booking hotelData={hotelData} loading={loading} error={error} bookingDetails={bookingDetails}  />} />
           {/* <Route path='/payment' element={<Payment hotelData={hotelData} loading={loading} error={error} /> */}
         </Routes>
       </div>
