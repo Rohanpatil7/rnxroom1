@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 
 // Renamed to Mealpop and it now accepts an `onClose` prop
-function Mealpop({ onClose }) {
+function Roompop({ onClose }) {
   const meal = ["Apple", "Banana", "Orange", "Fresh Juice"];
 
   // This useEffect hook manages the side effect of disabling/enabling body scroll.
@@ -51,4 +51,4 @@ function Mealpop({ onClose }) {
   );
 }
 
-export default Mealpop;
+export default Roompop;
