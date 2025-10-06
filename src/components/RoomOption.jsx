@@ -71,7 +71,7 @@ function RoomOption({ room, mealOption, onAddToCart, isBookingDisabled, bookingD
         <button
           disabled={isBookingDisabled || !hasPrice}
           onClick={() => onAddToCart(room, mealOption)}
-          className=" outline outline-indigo-500 text-sm xs:text-xs text-indigo-600 font-medium p-1 rounded hover:bg-indigo-600 hover:text-white disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200  max-w-[150px]  "
+          className=" outline outline-indigo-500 text-sm sm:text-xs text-indigo-600 font-medium p-1 rounded hover:bg-indigo-600 hover:text-white disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200  max-w-[200px] hover:scale-110 cursor-pointer"
         >
           SELECT ROOM
         </button>

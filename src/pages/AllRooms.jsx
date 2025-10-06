@@ -113,6 +113,8 @@ function AllRooms() {
 
         const response = await axios.post("/api/get_room_rates.php", requestBody);
         
+         console.log("RAW API RESPONSE:", response.data.result[0]);
+
         if (response.data?.result?.[0]?.Rooms) {
           const apiRooms = response.data.result[0].Rooms.map(room => ({
             _id: room.RoomTypeID,
@@ -120,9 +122,9 @@ function AllRooms() {
             description: room.Description,
             images: room.RoomImages,
             amenities: room.Amenities || [], 
-            policies: room.RoomPolicies || [], 
+            roomPolicies: room.roomPolicies || [], 
             mealPlans: room.MealPlans,
-            pricePerNight: room.MealPlans?.[0]?.Rates?.SingleOccupancy || 3000,
+            pricePerNight: room.MealPlans?.[0]?.Rates?.SingleOccupancy,
             remainingRooms: 10,
             maxCapacity: 4,
           }));
@@ -245,7 +247,7 @@ function AllRooms() {
 
   return ( 
     <div className='p-4 md:p-8 sm:p-4 pb-6 z-50 bg-white' >
-      <div className="sticky top-16 z-10  p-3 bg-white mb-2 ">
+      <div className="sticky top-16 z-50  p-3 bg-white mb-2 ">
         {isEditing ? (
           <div>
             <DatePricePicker

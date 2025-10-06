@@ -1,9 +1,8 @@
 import React, { useEffect } from 'react';
 
-// Renamed to Mealpop and it now accepts an `onClose` prop
-function Roompop({ onClose }) {
-  const meal = ["Apple", "Banana", "Orange", "Fresh Juice"];
-
+// Renamed to Roompop and it now accepts an `onClose` and `room` prop
+function Roompop({ room, onClose }) {
+   console.log('Data that finally reached Roompop:', room);
   // This useEffect hook manages the side effect of disabling/enabling body scroll.
   useEffect(() => {
     // Get the original overflow style of the body
@@ -22,21 +21,49 @@ function Roompop({ onClose }) {
   return (
     // Modal overlay: covers the entire screen
     <div
-      className="fixed inset-0 z-1000 flex items-center justify-center backdrop-blur-md bg-opacity-50"
+      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-opacity-50"
       onClick={onClose} // Close modal if you click on the overlay
     >
       {/* Modal content: stop propagation to prevent closing when clicking inside */}
       <div
-        className="relative w-full max-w-md p-6 bg-white rounded-lg shadow-xl"
+        className="relative w-full max-w-xl p-6 bg-white rounded-lg shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h4 className="text-xl font-semibold text-gray-800 mb-4">What's Included</h4>
+        <h4 className="text-xl font-semibold text-indigo-800  ">{room.title} Details</h4>
         
-        <ul className="list-disc list-inside space-y-2 text-gray-600">
-          {meal.map((item, index) => (
-            <li key={index}>{item}</li>
+        <p className="text-gray-600 text-sm mb-4">{room.description}</p>
+
+        <h5 className="text-md font-semibold text-gray-800 mb-2">Amenities</h5>
+        <div className="max-w-7xl  grid grid-cols-2 md:grid-cols-3 mb-2 gap-x-12 gap-y-2 text-gray-700">
+          {room.amenities.map((amenity, index) => (
+            <div key={index} className="flex items-start">
+              {/* Checkmark Icon */}
+              <svg className="w-4 h-4 text-indigo-500 mr-3  flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span><img src={amenity.Image} alt={amenity.Name} className="w-5 h-5 object-contain" /></span>
+              <span className='text-sm'>{amenity.Name}</span>
+            </div>
           ))}
-        </ul>
+        </div>
+
+        <h5 className=" text-md font-semibold text-gray-800 mb-2">Room Policies</h5>
+        <div className="max-w-7xl mx-auto  text-gray-700">
+          {room.roomPolicies.map((policy, index) => (
+            <div key={index} className="flex items-start">
+              {/* Checkmark Icon */}
+              <svg className="w-4 h-4 text-indigo-500 mr-3 mt-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <div>
+                <span className='text-sm'>{policy.Name} :</span>
+                <span className='text-xs'> {policy.Description}</span>
+              </div>
+              
+            </div>
+          ))}
+        </div>
+
 
         {/* Close button inside the modal */}
         <button

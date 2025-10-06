@@ -1,9 +1,10 @@
 // src/components/Roomcard.jsx
 
-import React from "react";
+import React,{useState} from "react";
 import ImageGallery from "react-image-gallery";
 import "react-image-gallery/styles/css/image-gallery.css";
 import RoomOption from "./RoomOption";
+import Roompop from "./Roompop";
 
 function Roomcard({ room, bookingDetails, onAddToCart }) {
   const roomImages =
@@ -23,10 +24,18 @@ function Roomcard({ room, bookingDetails, onAddToCart }) {
 
   const isBookingDisabled = !bookingDetails.checkIn || !bookingDetails.checkOut;
 
+  const [isPopupVisible, setIsPopupVisible] = useState(false); 
+  const togglePopup = () => {
+    setIsPopupVisible(!isPopupVisible);
+  };
+
   return (
     <div className="relative bg-white rounded-lg shadow-md overflow-hidden flex flex-col md:flex-row mb-6 border border-gray-200">
       <div className="w-full md:w-1/3 p-4 border-r border-gray-200 flex flex-col">
-        <h3 className="sticky text-md font-bold text-gray-800 mb-2">{room.title}</h3>
+      <div className="sticky top-0 bg-white z-10 text-md font-bold text-gray-800 pb-2">
+        <h3 className="">{room.title}</h3>
+      </div>
+        
         
         <div className="relative mb-4 rounded-md overflow-hidden">
           <ImageGallery
@@ -51,9 +60,9 @@ function Roomcard({ room, bookingDetails, onAddToCart }) {
           ))}
         </div>
 
-        <a href="#" className="text-blue-600 font-semibold text-xs mt-auto pt-4">
+        <button onClick={togglePopup} className="text-blue-600 font-semibold text-xs text-left pt-4 cursor-pointer">
           View More Details
-        </a>
+        </button>
       </div>
 
       <div className="w-full md:w-2/3 flex flex-col ">
@@ -79,6 +88,7 @@ function Roomcard({ room, bookingDetails, onAddToCart }) {
           )}
         </div>
       </div>
+      {isPopupVisible && <Roompop room={room} onClose={togglePopup} />}
     </div>
   );
 }

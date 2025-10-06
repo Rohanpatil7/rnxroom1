@@ -73,16 +73,22 @@ const BookingCart = ({ cart, bookingDetails, onRemove, onAdd, totalPrice }) => {
                         <h3 className="text-lg font-semibold mb-2 text-gray-300 hidden md:block">Your Selection</h3>
                         <div className="flex items-center gap-2 overflow-x-auto pb-2 ">
                             {cart.map(item => (
-                                <div key={item.room._id || item.room.id} className="bg-gray-700 rounded-lg p-2 flex-shrink-0 flex flex-col items-center gap-2 over">
+                                <div key={item.room._id || item.room.id} className="bg-gray-700 rounded-lg p-2 flex-shrink-0 flex flex-col items-center gap-2 over max-w-[300px]">
                                     <div className='flex flex-col gap-1 items-center' >
-                                        <p className="text-sm md:text-base font-bold whitespace-wrap">{item.room.title}</p>
-                                        <p className="text-xs md:text-sm text-gray-400">
-                                            ₹{item.room.pricePerNight.toLocaleString('en-IN')}
-                                        </p>
-                                        <div className="flex items-center gap-2 bg-gray-800 rounded-full px-2">
+                                        <p className="text-sm md:text-base font-semibold whitespace-wrap">{item.room.title}</p>
+                                           
+                                        <div className="flex items-center gap-2  px-2">
+                                            <div> <p className="text-xs md:text-sm text-gray-400 text-indigo-300">
+                                                ₹{item.room.pricePerNight.toLocaleString('en-IN')}
+                                            </p>
+                                            </div>
+
+                                            <div className='flex items-center gap-2 bg-gray-800 rounded-full'>
                                             <button onClick={() => onRemove(item.room)} className="text-white font-bold text-base w-5 h-5 sm:text-lg sm:w-6 sm:h-6 rounded-full flex items-center justify-center hover:bg-gray-600 transition-colors cursor-pointer" aria-label={`Decrease quantity of ${item.room.title}`}>-</button>
-                                            <span className='font-medium text-base sm:text-lg'>{item.quantity}</span>
+                                            <span className='font-medium text-base sm:text-xs'>{item.quantity}</span>
                                             <button onClick={() => onAdd(item.room)} className="text-white font-bold text-base w-5 h-5 sm:text-lg sm:w-6 sm:h-6 rounded-full flex items-center justify-center hover:bg-gray-600 transition-colors disabled:opacity-50 cursor-pointer" aria-label={`Increase quantity of ${item.room.title}`} disabled={item.quantity >= item.room.remainingRooms}>+</button>
+                                            </div>
+                                           
                                         </div>
                                     </div>
                                 </div>
