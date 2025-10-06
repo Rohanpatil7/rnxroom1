@@ -90,7 +90,7 @@ function AllRooms() {
   }, [bookingDetails, cart]);
   
 
-  useEffect(() => {
+   useEffect(() => {
     const fetchRoomRates = async () => {
       if (!bookingDetails.checkIn) {
           setLoading(false);
@@ -100,13 +100,17 @@ function AllRooms() {
       setLoading(true);
       setError(null);
       try {
-        const bookingDate = new Date(bookingDetails.checkIn).toISOString().split('T')[0];
+        // const bookingDate = new Date(bookingDetails.checkIn).toISOString().split('T')[0];
+        
+        // Revert to sending a plain JavaScript object
         const requestBody = {
+          // ==> IMPORTANT: REPLACE WITH YOUR REAL CREDENTIALS <==
           "UserName": "bookinguser",
           "Password": "booking@123",
           "Parameter": "QWVYSS9QVTREQjNLYzd0bjRZRTg4dz09",
-          "BookingDate": bookingDate
+          "BookingDate": "2025-10-01"
         };
+
         const response = await axios.post("/api/get_room_rates.php", requestBody);
         
         if (response.data?.result?.[0]?.Rooms) {
@@ -115,6 +119,8 @@ function AllRooms() {
             title: room.RoomCategory.trim(), 
             description: room.Description,
             images: room.RoomImages,
+            amenities: room.Amenities || [], 
+            policies: room.RoomPolicies || [], 
             mealPlans: room.MealPlans,
             pricePerNight: room.MealPlans?.[0]?.Rates?.SingleOccupancy || 3000,
             remainingRooms: 10,
@@ -129,7 +135,11 @@ function AllRooms() {
           setRooms([]);
         }
       } catch (err) {
-        setError(err.message || 'An unknown error occurred.');
+        if (err.response) {
+            setError(`Error: ${err.response.status} - ${err.response.data?.error || err.message}`);
+        } else {
+            setError(err.message || 'An unknown error occurred.');
+        }
         setRooms([]);
       } finally {
         setLoading(false);
@@ -137,8 +147,6 @@ function AllRooms() {
     };
 
     fetchRoomRates();
-  // *** FIX: Changed the dependency from [checkInTime.checkIn] to [bookingDetails.checkIn] ***
-  // This ensures the API is called again whenever the check-in date is updated.
   }, [bookingDetails.checkIn]);
 
 
