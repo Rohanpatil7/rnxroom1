@@ -57,7 +57,7 @@ function Home({ hotelData, isBookingDisabled }) {
   return (
     <div>
       {/* Hero section is now a dynamic slider */}
-      <section className="relative h-[50vh] md:h-[600px]  w-full text-white ">
+      <section className="relative h-[50vh] md:h-[600px]  w-full text-white  bg-white">
         {hasImages ? (
           <>
             {/* Slider Background Images */}
@@ -143,7 +143,7 @@ function Home({ hotelData, isBookingDisabled }) {
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-4 gap-y-8 justify-items-center">
                         {hotelData?.HotelAmenities.map((amenity, index) => (
                             <div key={index} className="flex flex-col items-center text-center">
-                                <div className="size-14 p-2  rounded-lg">
+                                <div className="size-12 p-2  rounded-lg">
                                     <img src={amenity.IconUrl} alt={amenity.Name} className="w-full h-full object-contain"/>
                                 </div>
                                 <div className="mt-2">

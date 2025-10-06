@@ -244,8 +244,8 @@ function AllRooms() {
   };
 
   return ( 
-    <div className='p-4 md:p-8 sm:p-4 pb-6 z-50' >
-      <div className="sticky top-16 z-10 bg-white p-3 mb-2 ">
+    <div className='p-4 md:p-8 sm:p-4 pb-6 z-50 bg-white' >
+      <div className="sticky top-16 z-10  p-3 bg-white mb-2 ">
         {isEditing ? (
           <div>
             <DatePricePicker
@@ -273,13 +273,13 @@ function AllRooms() {
             <div className="flex-shrink-0">
               <button
                 onClick={() => setIsEditing(true)}
-                className="md:hidden text-xs text-blue-600 font-semibold hover:underline"
+                className="md:hidden text-xs text-white font-semibold hover:underline"
               >
                 Edit
               </button>
               <button
                 onClick={() => setIsEditing(true)}
-                className="hidden md:block px-4 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                className="hidden md:block px-4 py-1.5 text-xs font-medium text-indigo-600 outline outline-indigo-500 rounded-md hover:bg-blue-700 hover:text-white"
               >
                 Edit
               </button>

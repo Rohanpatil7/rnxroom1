@@ -39,8 +39,8 @@ function RoomOption({ room, mealOption, onAddToCart, isBookingDisabled, bookingD
     <div key={key} className="flex p-4 border-b border-gray-200 last:border-b-0 items-center hover:bg-gray-50/50">
       {/* Column 1: Room Option Details */}
       <div className="w-2/3 pr-4">
-        <p className="font-semibold text-medium text-gray-800">{mealOption.MealPlan}</p>
-         <ul className="list-disc list-inside text-sm text-gray-600 mt-2 space-y-1">
+        <p className="font-semibold text-medium text-gray-800 sticky top-0 bg-white -z-0 py-2">{mealOption.MealPlan}</p>
+         <ul className="list-disc list-inside text-xs text-gray-600 mt-2 space-y-1">
           {policies && policies.map((policy, index) => (
             <li key={index}>{policy}</li>
           ))}
