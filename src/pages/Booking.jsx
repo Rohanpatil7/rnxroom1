@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Costcard from '../components/Costcard';
-import Guestcounter from '../components/Gueatcounter';
+import Guestcounter from '../components/Guestcounter';
 import Guestinfo from '../components/Guestinfo';
 import BillingContact from '../components/BillingContact';
 
