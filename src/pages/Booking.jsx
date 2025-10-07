@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react'; // 1. Import useCallback
+import { useNavigate } from 'react-router-dom';
 import Costcard from '../components/Costcard';
 import Guestcounter from '../components/Gueatcounter';
 import Guestinfo from '../components/Guestinfo';
 import BillingContact from '../components/BillingContact';
+import SessionTimer from '../components/SessionTimer';
+import { toast } from 'react-toastify';
 
 const BOOKING_DETAILS_KEY = 'currentBookingDetails';
-// +++ NEW: Constants for cost calculation +++
-const CHILD_AGE_LIMIT = 12;
-const EXTRA_BED_COST_PER_NIGHT = 1000; // Cost in INR
+const SESSION_EXPIRY_KEY = 'sessionExpiry';
 
 function Booking() {
+  const navigate = useNavigate();
   const [step, setStep] = useState('guest-count');
   const [bookingData, setBookingData] = useState({
     details: null,
@@ -18,43 +20,46 @@ function Booking() {
   });
   
   const [guestInformation, setGuestInformation] = useState(null);
+  const [sessionExpiry, setSessionExpiry] = useState(() => {
+    return sessionStorage.getItem(SESSION_EXPIRY_KEY);
+  });
+
+  // 2. Wrap the function in useCallback
+  const handleSessionExpiry = useCallback(() => {
+    setBookingData({ details: null, guestCounts: null, childrenAges: null });
+    setSessionExpiry(null);
+    sessionStorage.removeItem(BOOKING_DETAILS_KEY);
+    sessionStorage.removeItem('bookingCart');
+    sessionStorage.removeItem(SESSION_EXPIRY_KEY);
+    sessionStorage.removeItem('guestCounterFormState');
+    toast.error("Your booking session has expired. Redirecting...");
+    setTimeout(() => navigate('/allrooms'), 2000);
+  }, [navigate]);
 
   useEffect(() => {
     const savedBookingDetails = sessionStorage.getItem(BOOKING_DETAILS_KEY);
-    if (savedBookingDetails) {
-      try {
-        const parsedDetails = JSON.parse(savedBookingDetails);
-        setBookingData(prev => ({ ...prev, details: parsedDetails }));
-      } catch (error) {
-        console.error("Failed to parse booking details from sessionStorage:", error);
-        setBookingData(prev => ({ ...prev, details: null }));
-      }
+    if (!savedBookingDetails) {
+      handleSessionExpiry();
     }
-  }, []);
 
-  // +++ MODIFIED: This function now calculates and stores the extra cost +++
-  const handleGuestConfirm = ({ guestCounts, childrenAges }) => {
+    const expiryTime = sessionStorage.getItem(SESSION_EXPIRY_KEY);
+    if (!expiryTime || new Date().getTime() > expiryTime) {
+      handleSessionExpiry();
+    }
+  }, [handleSessionExpiry]); // 3. Add the function to the dependency array
+
+  // ... (the rest of the component remains the same)
+  const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraChildCost }) => {
     setBookingData(prev => {
-      const nights = prev.details?.dates?.nights || 0;
-      let extraBedCost = 0;
-
-      // Calculate extra cost based on children ages
-      if (childrenAges && nights > 0) {
-        Object.values(childrenAges).forEach(ageArray => {
-          const olderChildrenCount = ageArray.filter(age => age > CHILD_AGE_LIMIT).length;
-          extraBedCost += olderChildrenCount * EXTRA_BED_COST_PER_NIGHT * nights;
-        });
-      }
-
-      // Create an updated details object that includes the new cost
       const updatedDetails = {
         ...prev.details,
-        extraBedCost: extraBedCost,
+        extraAdultCost,
+        extraChildCost,
       };
 
       return {
         ...prev,
-        details: updatedDetails, // Use the new object with the extra cost
+        details: updatedDetails,
         guestCounts,
         childrenAges,
       };
@@ -66,17 +71,16 @@ function Booking() {
     setGuestInformation(info);
   };
   
-  // +++ MODIFIED: The final payload now includes the extra cost in its calculations +++
   const handleBookingSubmit = (billingDetails) => {
     if (!bookingData.details || !guestInformation || !billingDetails) {
       alert("Please ensure all booking information is complete.");
       return;
     }
 
-    const { totalPrice, extraBedCost = 0 } = bookingData.details;
-    const gstAmount = (totalPrice + extraBedCost) * 0.12; // GST is applied to the total service cost
+    const { totalPrice, extraAdultCost = 0, extraChildCost = 0 } = bookingData.details;
+    const gstAmount = (totalPrice + extraAdultCost + extraChildCost) * 0.12;
     const serviceFee = 299;
-    const grandTotal = totalPrice + extraBedCost + gstAmount + serviceFee;
+    const grandTotal = totalPrice + extraAdultCost + extraChildCost + gstAmount + serviceFee;
 
     const finalBookingPayload = {
       stayDetails: bookingData.details,
@@ -86,7 +90,8 @@ function Booking() {
       billingContact: billingDetails,
       costSummary: {
         totalRoomCost: totalPrice,
-        extraBedCost: extraBedCost,
+        extraAdultCost,
+        extraChildCost,
         gstAmount,
         serviceFee,
         grandTotal,
@@ -97,7 +102,6 @@ function Booking() {
     alert("Booking data has been compiled and logged to the console. Ready for payment processing!");
   };
 
-  // The useMemo hook for guestInfoData remains unchanged
   const guestInfoData = useMemo(() => {
     if (step !== 'guest-details' || !bookingData.details || !bookingData.guestCounts) {
       return [];
@@ -119,6 +123,7 @@ function Booking() {
 
   return (
     <div className="bg-gray-50 min-h-screen">
+       {sessionExpiry && <SessionTimer expiryTimestamp={sessionExpiry} onExpiry={handleSessionExpiry} />}
       <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <div className="flex flex-col md:flex-row md:gap-6 lg:gap-8">
           <div className="w-full md:w-3/5 space-y-6">
@@ -128,6 +133,7 @@ function Booking() {
                 <Guestcounter 
                   bookingDetails={bookingData.details}
                   onConfirm={handleGuestConfirm}
+                  rooms={bookingData.details?.rooms}
                 />
               </section>
             )}
@@ -153,7 +159,6 @@ function Booking() {
             <div className="lg:sticky lg:top-8 mt-6 md:mt-0">
               <section aria-labelledby="cost-summary-heading">
                   <h2 id="cost-summary-heading" className="sr-only">Cost Summary</h2>
-                  {/* The updated bookingData.details is passed to Costcard */}
                   <Costcard bookingDetails={bookingData.details} />
               </section>
             </div>

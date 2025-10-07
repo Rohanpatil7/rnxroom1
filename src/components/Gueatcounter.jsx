@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react';
 // --- CONSTANTS ---
 const BOOKING_DETAILS_KEY = 'currentBookingDetails';
 const GUEST_FORM_STATE_KEY = 'guestCounterFormState';
-const CHILD_AGE_LIMIT = 12; // A child older than this incurs an extra fee.
+const CHILD_AGE_LIMIT = 12; // A child older than 12 will incur an extra fee.
 
-// --- SVG Icons --- (No changes here)
+// --- SVG Icons ---
 const MinusIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
         <path strokeLinecap="round" strokeLinejoin="round" d="M18 12H6" />
@@ -18,15 +18,13 @@ const PlusIcon = () => (
     </svg>
 );
 
-
-const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm }) => {
+const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms }) => {
     const [bookingDetails, setBookingDetails] = useState(null);
     const [guestCounts, setGuestCounts] = useState({});
     const [childrenAges, setChildrenAges] = useState({});
     const [occupancyErrors, setOccupancyErrors] = useState({});
     const [formErrors, setFormErrors] = useState({});
 
-    // Initialization logic remains the same
     useEffect(() => {
         const details = initialBookingDetails || JSON.parse(sessionStorage.getItem(BOOKING_DETAILS_KEY));
         
@@ -54,7 +52,6 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm }) => {
         }
     }, [initialBookingDetails]);
 
-    // Effect to save form state remains the same
     useEffect(() => {
         if (bookingDetails) {
             const formState = { guestCounts, childrenAges };
@@ -62,7 +59,6 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm }) => {
         }
     }, [guestCounts, childrenAges, bookingDetails]);
 
-    // handleCountChange remains the same
     const handleCountChange = (instanceId, type, delta, maxOccupancy) => {
         setGuestCounts(prevCounts => {
             const currentCounts = { ...(prevCounts[instanceId] || { adults: 1, children: 0 }) };
@@ -106,7 +102,6 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm }) => {
         });
     };
     
-    // handleChildAgeChange remains the same
     const handleChildAgeChange = (instanceId, childIndex, age) => {
         const newAge = Math.max(0, parseInt(age, 10) || 0);
         setChildrenAges(prevAges => {
@@ -123,7 +118,6 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm }) => {
         }
     };
 
-    // handleConfirmGuests remains the same, it only validates and passes data up.
     const handleConfirmGuests = () => {
         const newErrors = {};
         let formIsValid = true;
@@ -141,9 +135,32 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm }) => {
         setFormErrors(newErrors);
 
         if (formIsValid) {
-            console.log("Form is valid. Proceeding to next step.", { guestCounts, childrenAges });
+            let extraAdultCost = 0;
+            let extraChildCost = 0;
+            const nights = bookingDetails.dates.nights || 0;
+
+            if (rooms && nights > 0) {
+                Object.entries(guestCounts).forEach(([instanceId, counts]) => {
+                    const roomId = instanceId.split('_')[0];
+                    const room = rooms.find(r => r._id === roomId);
+                    if (room && room.mealPlans && room.mealPlans.length > 0) {
+                        const rates = room.mealPlans[0].Rates; // Assuming the first meal plan's rates
+                        if (counts.adults > 2) {
+                            extraAdultCost += (counts.adults - 2) * (rates.ExtraAdultRate || 0) * nights;
+                        }
+                        
+                        const ages = childrenAges[instanceId] || [];
+                        ages.forEach(age => {
+                            if (age > CHILD_AGE_LIMIT) {
+                                extraChildCost += (rates.ExtraChildRate || 0) * nights;
+                            }
+                        });
+                    }
+                });
+            }
+            
             if (onConfirm) {
-                onConfirm({ guestCounts, childrenAges });
+                onConfirm({ guestCounts, childrenAges, extraAdultCost, extraChildCost });
             } else {
                 alert("Guest details have been confirmed!");
             }
@@ -172,7 +189,6 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm }) => {
     return (
         <div className="w-full max-w-3xl mx-auto p-4 font-sans">
             <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-xl">
-                {/* Header section is unchanged */}
                 <div className="mb-6 text-center">
                     <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Guest Details</h2>
                     <p className="text-sm sm:text-base text-gray-500 mt-2">Specify the number of adults and children for each room.</p>
@@ -184,7 +200,6 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm }) => {
                         const isMaxReached = currentGuestCount >= details.room.maxOccupancy;
                         return (
                             <div key={instanceId} className="bg-gray-50 p-4 sm:p-5 rounded-xl border border-gray-200">
-                                {/* Room Title and Occupancy info is unchanged */}
                                 <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-gray-200 pb-4 mb-4">
                                     <div>
                                         <h4 className="text-lg sm:text-xl font-semibold text-gray-800">{details.title}</h4>
@@ -197,7 +212,6 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm }) => {
                                     </div>
                                 </div>
                                 
-                                {/* Adult and Child counters are unchanged */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* Adults Counter */}
                                     <div className="flex items-center justify-between gap-1">
@@ -268,8 +282,7 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm }) => {
                                                         min="0"
                                                         max="17"
                                                     />
-                                                    {/* +++ NEW: Add a small notice if child age is over the limit +++ */}
-                                                    {age > CHILD_AGE_LIMIT && (
+                                                     {age > CHILD_AGE_LIMIT && (
                                                         <p className="text-xs text-orange-600 mt-1">Extra guest fee may apply.</p>
                                                     )}
                                                 </div>
@@ -288,7 +301,6 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm }) => {
                     })}
                 </div>
 
-                {/* Confirm button is unchanged */}
                 <div className="mt-8">
                     <button 
                         type="button" 

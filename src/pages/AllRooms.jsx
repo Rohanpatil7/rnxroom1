@@ -6,10 +6,14 @@ import Roomcard from '../components/Roomcard';
 import DatePricePicker from '../components/DatePricePicker';
 import BookingCart from '../components/BookingCart';
 import axios from 'axios';
+import SessionTimer from '../components/SessionTimer'; // Import the new component
+import { toast } from 'react-toastify'; // For notifications
 
 // --- SESSION: Define keys for storing booking data ---
 const BOOKING_CART_KEY = 'bookingCart';
 const BOOKING_DETAILS_KEY = 'bookingDetails';
+const SESSION_EXPIRY_KEY = 'sessionExpiry';
+const SESSION_DURATION = 15 * 60 * 1000; // 15 minutes
 
 // --- HELPER (REFACTORED): Determines rate using an object lookup ---
 const getRateForOccupancy = (rates, adults) => {

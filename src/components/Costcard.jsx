@@ -25,16 +25,16 @@ function Costcard({ bookingDetails }) {
     return null;
   }
   
-  // +++ MODIFIED: Destructure the new extraBedCost property with a default value +++
-  const { rooms = [], dates = {}, totalPrice = 0, extraBedCost = 0 } = bookingDetails;
+  // Destructure the new extra cost properties
+  const { rooms = [], dates = {}, totalPrice = 0, extraAdultCost = 0, extraChildCost = 0 } = bookingDetails;
   const { checkIn, checkOut, nights = 0 } = dates;
 
   const totalRooms = rooms.reduce((sum, item) => sum + item.quantity, 0);
   
-  // +++ MODIFIED: GST and Grand Total now include the extraBedCost +++
-  const gstAmount = (totalPrice + extraBedCost) * 0.12;
+  // GST and Grand Total now include the extra costs
+  const gstAmount = (totalPrice + extraAdultCost + extraChildCost) * 0.12;
   const serviceFee = 299;
-  const grandTotal = totalPrice + extraBedCost + gstAmount + serviceFee;
+  const grandTotal = totalPrice + extraAdultCost + extraChildCost + gstAmount + serviceFee;
   
   return (
     <div className="max-w-sm rounded-xl bg-white font-sans shadow-lg overflow-hidden ">
@@ -82,11 +82,19 @@ function Costcard({ bookingDetails }) {
               <p className="font-medium text-gray-800">{formatCurrency(totalPrice)}</p>
             </div>
             
-            {/* +++ NEW: Conditionally render the Extra Guest Fee line item +++ */}
-            {extraBedCost > 0 && (
+            {/* Conditionally render the Extra Adult Cost */}
+            {extraAdultCost > 0 && (
                 <div className="flex items-center justify-between">
-                    <p className="text-gray-600">Extra Guest Fee</p>
-                    <p className="font-medium text-gray-800">{formatCurrency(extraBedCost)}</p>
+                    <p className="text-gray-600">Extra Adult Cost</p>
+                    <p className="font-medium text-gray-800">{formatCurrency(extraAdultCost)}</p>
+                </div>
+            )}
+
+            {/* Conditionally render the Extra Child Cost */}
+            {extraChildCost > 0 && (
+                <div className="flex items-center justify-between">
+                    <p className="text-gray-600">Extra Child Cost</p>
+                    <p className="font-medium text-gray-800">{formatCurrency(extraChildCost)}</p>
                 </div>
             )}
 
