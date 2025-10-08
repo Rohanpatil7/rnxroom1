@@ -1,33 +1,22 @@
 // src/components/BookingCart.jsx
 
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 
-// Define a key to be shared with GuestCounter
 const BOOKING_DETAILS_KEY = 'currentBookingDetails';
 
-const BookingCart = ({ cart, bookingDetails, onRemove, onAdd, totalPrice }) => {
-    const navigate = useNavigate();
-
+const BookingCart = ({ cart, bookingDetails, onRemove, onAdd, totalPrice, onBookNow }) => {
     const totalNights = bookingDetails.nights > 0 ? bookingDetails.nights : 0;
 
-    /**
-     * This effect syncs the current booking details with sessionStorage
-     * whenever the cart, dates, or total price change. This allows the GuestCounter
-     * component to always have the most up-to-date information.
-     */
     useEffect(() => {
         const currentBookingDetails = {
             rooms: cart.map(item => ({
-                // +++ FIX +++
-                // Use the room's '_id' or 'id' property to ensure a valid ID is always captured.
-                // This is the most common source of the "title not found" error.
-                roomId: item.room._id || item.room.id,
+                roomId: item.room._id.split('-')[0],
                 title: item.room.title,
                 quantity: item.quantity,
                 pricePerNight: item.room.pricePerNight,
                 room: {
-                    maxOccupancy: item.room.maxOccupancy
+                    maxOccupancy: item.room.maxCapacity || 4
                 }
             })),
             dates: {
@@ -42,11 +31,9 @@ const BookingCart = ({ cart, bookingDetails, onRemove, onAdd, totalPrice }) => {
             totalPrice: totalPrice,
         };
         
-        // Save the latest details to session storage for GuestCounter to use.
         sessionStorage.setItem(BOOKING_DETAILS_KEY, JSON.stringify(currentBookingDetails));
 
     }, [cart, bookingDetails, totalPrice, totalNights]);
-
 
     const handleBookNow = () => {
         if (totalNights === 0 || cart.length === 0) {
@@ -54,10 +41,7 @@ const BookingCart = ({ cart, bookingDetails, onRemove, onAdd, totalPrice }) => {
             return;
         }
         
-        const bookingData = JSON.parse(sessionStorage.getItem(BOOKING_DETAILS_KEY));
-        console.log("Redirecting to guest details page with data:", bookingData);
-        
-        navigate('/booking/new', { state: { bookingDetails: bookingData } });
+        onBookNow(); 
     };
 
     if (cart.length === 0) {
@@ -106,7 +90,7 @@ const BookingCart = ({ cart, bookingDetails, onRemove, onAdd, totalPrice }) => {
                         </div>
                         <button
                             onClick={handleBookNow} 
-                            className="bg-indigo-600 text-white font-bold text-sm md:text-base py-2 px-5 md:py-3 md:px-8 rounded-full hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer"
+                            className="bg-indigo-600 text-white font-bold text-sm md:text-base py-2 px-5 md:py-3 md:px-8 rounded-xl hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors whitespace-nowrap cursor-pointer"
                             disabled={totalNights === 0 || totalPrice === 0}
                         >
                             Book Now

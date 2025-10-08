@@ -101,9 +101,9 @@ function BillingContact({ onSubmitBooking }) {
 
   return (
     <div className="w-full bg-white rounded-2xl shadow-xl p-6 sm:p-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Billing Information</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-1">Billing Information</h2>
       {/* The form now calls handleFinalSubmit */}
-      <form className="space-y-6" onSubmit={handleFinalSubmit} noValidate>
+      <form className="space-y-4" onSubmit={handleFinalSubmit} noValidate>
         {/* Full Name */}
         <div>
           <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">

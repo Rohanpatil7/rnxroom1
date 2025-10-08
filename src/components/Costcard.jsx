@@ -1,6 +1,7 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 
-// Helper to format dates (unchanged)
+// Helper to format dates
 const formatDate = (date) => {
   if (!date) return 'Select Date';
   return new Date(date).toLocaleString('en-GB', {
@@ -10,7 +11,7 @@ const formatDate = (date) => {
   });
 };
 
-// Helper to format currency (unchanged)
+// Helper to format currency
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -20,53 +21,61 @@ const formatCurrency = (amount) => {
   }).format(amount || 0);
 };
 
-function Costcard({ bookingDetails }) {
+function Costcard({ bookingDetails, hotelData ,taxData}) {
   if (!bookingDetails) {
     return null;
   }
   
-  // Destructure the new extra cost properties
   const { rooms = [], dates = {}, totalPrice = 0, extraAdultCost = 0, extraChildCost = 0 } = bookingDetails;
   const { checkIn, checkOut, nights = 0 } = dates;
+  
+
+  // Set a default service fee, as it's not in the tax API
+  
+  
 
   const totalRooms = rooms.reduce((sum, item) => sum + item.quantity, 0);
   
-  // GST and Grand Total now include the extra costs
-  const gstAmount = (totalPrice + extraAdultCost + extraChildCost) * 0.12;
-  const serviceFee = 299;
-  const grandTotal = totalPrice + extraAdultCost + extraChildCost + gstAmount + serviceFee;
+   // Set a default service fee, as it's not in the tax API
+  const serviceFee = 299; 
+  const taxableAmount = totalPrice + extraAdultCost + extraChildCost;
   
+  // Calculate the total GST amount from all individual taxes
+  const totalGstAmount = taxData?.taxes?.reduce((sum, tax) => {
+    return sum + (taxableAmount * (parseFloat(tax.Percentage) / 100));
+  }, 0) || (taxableAmount * 0.18); // Default to 18% if data not loaded
+  const grandTotal = taxableAmount + totalGstAmount + serviceFee;
+  
+  // Use the first hotel image, with a fallback
+  const hotelImage = hotelData?.HotelImages?.[0] || "https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=1925&auto=format&fit=crop";
+
   return (
     <div className="max-w-sm rounded-xl bg-white font-sans shadow-lg overflow-hidden ">
       <img
         className="w-full h-48 object-cover"
-        src="https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=1925&auto=format&fit=crop"
-        alt="A hand opening a hotel room door"
+        src={hotelImage}
+        alt="Hotel"
       />
-      <div className="p-6">
-        {/* Top section is unchanged */}
+      <div className="p-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Your Stay Summary</h2>
-          <p className="mt-1 text-sm text-gray-500">{totalRooms} Room{totalRooms !== 1 ? 's' : ''} Selected</p>
-          <p className="mt-3 text-sm text-gray-800">
-            {formatDate(checkIn)} - {formatDate(checkOut)}
+          <h2 className="text-xl font-bold text-gray-800">Your Stay Summary</h2>
+          <p className=" text-sm text-gray-500">{totalRooms} Room{totalRooms !== 1 ? 's' : ''} Selected</p>
+          <p className="mt-3 text-sm font-medium text-gray-800">
+            {formatDate(checkIn)} ----- {nights > 0 ? nights : '0'} Night{nights !== 1 ? 's' : ''} ----- {formatDate(checkOut)}
           </p>
-          <p className="text-sm text-gray-800">
-            {nights > 0 ? nights : '0'} Night{nights !== 1 ? 's' : ''}
-          </p>
-          <p className="mt-2 cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+
+          <NavLink to="/allrooms" className="mt-2 cursor-pointer text-xs font-medium text-indigo-400 hover:text-indigo-500">
             &larr; Edit Stay Details
-          </p>
+          </NavLink>
         </div>
 
-        <hr className="my-4" />
+        <hr className="my-2" />
 
         <div>
-          {/* Room breakdown is unchanged */}
           <div className="space-y-2">
             {rooms.map(item => (
               <div key={item.roomId} className="flex items-center justify-between text-sm">
-                <p className="text-blue-600 pr-2">{item.quantity} x {item.title}</p>
+                <p className="text-indigo-600 pr-2">{item.quantity} x {item.title}</p>
                 <p className="font-medium text-gray-700 whitespace-nowrap">
                   {formatCurrency(item.quantity * item.pricePerNight * nights)}
                 </p>
@@ -74,45 +83,49 @@ function Costcard({ bookingDetails }) {
             ))}
           </div>
           
-          <hr className="my-4 border-t border-dotted border-gray-300" />
+          <hr className="my-2 border-t border-dotted border-gray-300" />
           
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <p className="text-gray-600">Total Room Cost</p>
+              <p className=" text-sm text-gray-600">Total Room Cost</p>
               <p className="font-medium text-gray-800">{formatCurrency(totalPrice)}</p>
             </div>
             
-            {/* Conditionally render the Extra Adult Cost */}
             {extraAdultCost > 0 && (
                 <div className="flex items-center justify-between">
-                    <p className="text-gray-600">Extra Adult Cost</p>
+                    <p className="text-sm text-gray-600">Extra Adult Cost</p>
                     <p className="font-medium text-gray-800">{formatCurrency(extraAdultCost)}</p>
                 </div>
             )}
 
-            {/* Conditionally render the Extra Child Cost */}
             {extraChildCost > 0 && (
                 <div className="flex items-center justify-between">
-                    <p className="text-gray-600">Extra Child Cost</p>
+                    <p className="text-sm text-gray-600">Paid Child Cost</p>
                     <p className="font-medium text-gray-800">{formatCurrency(extraChildCost)}</p>
                 </div>
             )}
 
-            <div className="flex items-center justify-between">
-              <p className="text-gray-600">GST (12%)</p>
-              <p className="font-medium text-gray-800">{formatCurrency(gstAmount)}</p>
+            {/* UPDATED: Dynamically display each tax from the API */}
+          {taxData?.taxes?.map(tax => (
+            <div key={tax.TaxGroupID} className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">{tax.TaxGroupName} ({parseFloat(tax.Percentage)}%)</p>
+              <p className="font-medium text-gray-800">
+                {formatCurrency(taxableAmount * (parseFloat(tax.Percentage) / 100))}
+              </p>
             </div>
+          ))}
+
             <div className="flex items-center justify-between">
-              <p className="text-gray-600">Service Fee</p>
+              <p className="text-sm text-gray-600">Service Fee</p>
               <p className="font-medium text-gray-800">{formatCurrency(serviceFee)}</p>
             </div>
           </div>
 
-          <hr className="my-4" />
+          <hr className="my-2" />
 
           <div className="flex items-center justify-between">
-            <p className="text-lg font-bold text-gray-900">Grand Total</p>
-            <p className="text-lg font-bold text-gray-900">{formatCurrency(grandTotal)}</p>
+            <p className="text-lg font-semibold text-indigo-700">Grand Total</p>
+            <p className="text-lg font-semibold text-indigo-700">{formatCurrency(grandTotal)}</p>
           </div>
         </div>
       </div>

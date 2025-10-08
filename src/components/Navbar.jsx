@@ -46,12 +46,12 @@ const Navbar = ({hotelData}) => {
       // }`}
     >
       {/* Logo */}
-      <Link to={'/'} className={`h-24 items-center align-baseline `}>
+      <Link to={'/'} className={`size-16 items-center align-baseline `}>
        {/* ${isScrolled && "invert opacity-100 "} */}
         <img
           src={hotelData?.LogoUrl}
           alt="logo"
-          className={`h-20 justify-center align-baseline items-center`}
+          className={`size-16  justify-center  items-center`}
           //  ${isScrolled && "invert opacity-100 "}
         />
       </Link>

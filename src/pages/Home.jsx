@@ -126,7 +126,7 @@ function Home({ hotelData, isBookingDisabled }) {
             
             {/* About Property Section */}
             <div className="lg:w-1/2 flex flex-col">
-                <h1 className="text-3xl font-semibold text-center  mb-6">
+                <h1 className="text-2xl font-semibold text-center  mb-4">
                     About our Property
                 </h1>
                 <p className="text-gray-800 md:text-center sm:text-center ">
@@ -137,10 +137,10 @@ function Home({ hotelData, isBookingDisabled }) {
             {/* Facilities Section */}
             {hotelData?.HotelAmenities && hotelData?.HotelAmenities.length > 0 && (
                 <div className="lg:w-1/2">
-                    <h1 className="text-3xl font-semibold text-center mb-6">
+                    <h1 className="text-2xl font-semibold text-center mb-4">
                         Facilities We Provide
                     </h1>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-4 gap-y-8 justify-items-center">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-x-2 gap-y-4 justify-items-center">
                         {hotelData?.HotelAmenities.map((amenity, index) => (
                             <div key={index} className="flex flex-col items-center text-center">
                                 <div className="size-12 p-2  rounded-lg">
@@ -160,13 +160,13 @@ function Home({ hotelData, isBookingDisabled }) {
         {/* Policies Section */}
         {hotelData?.HotelPolicies && hotelData?.HotelPolicies.length > 0 && (
   <div className="w-full py-12 px-4 sm:px-8 lg:px-16">
-    <h3 className="text-3xl font-semibold text-center mx-auto mb-8">Hotel Policies</h3>
+    <h3 className="text-2xl font-semibold text-center mx-auto mb-4">Hotel Policies</h3>
     {/* Policies are now in a responsive 2-column grid */}
-    <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-4 text-gray-700">
+    <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-2 text-gray-700">
       {hotelData?.HotelPolicies.map((policy, index) => (
         <div key={index} className="flex items-start">
           {/* Checkmark Icon */}
-          <svg className="w-5 h-5 text-indigo-500 mr-3 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg className="w-4 h-4 text-indigo-500 mr-3 mt-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
           <span>{policy}</span>
@@ -194,7 +194,7 @@ function Home({ hotelData, isBookingDisabled }) {
             <NavLink
               to="/allrooms"
               state={{ initialBookingDetails: bookingDetails }}
-              className={`rounded-full w-full px-6 py-3 text-sm font-medium border transition-all bg-linear-to-top from-sky-500 to-indigo-500 ${
+              className={`rounded-lg w-full px-6 py-3 text-sm font-medium border transition-all bg-linear-to-top from-sky-500 to-indigo-500 ${
                 isBookingDisabled
                   ? "bg-gray-400 text-white cursor-not-allowed"
                   : "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg shadow-indigo-200"

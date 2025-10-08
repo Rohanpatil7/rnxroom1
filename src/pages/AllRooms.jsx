@@ -6,29 +6,23 @@ import Roomcard from '../components/Roomcard';
 import DatePricePicker from '../components/DatePricePicker';
 import BookingCart from '../components/BookingCart';
 import axios from 'axios';
-import SessionTimer from '../components/SessionTimer'; // Import the new component
-import { toast } from 'react-toastify'; // For notifications
 
 // --- SESSION: Define keys for storing booking data ---
 const BOOKING_CART_KEY = 'bookingCart';
 const BOOKING_DETAILS_KEY = 'bookingDetails';
-const SESSION_EXPIRY_KEY = 'sessionExpiry';
-const SESSION_DURATION = 15 * 60 * 1000; // 15 minutes
 
 // --- HELPER (REFACTORED): Determines rate using an object lookup ---
 const getRateForOccupancy = (rates, adults) => {
   if (!rates) return null;
   const numAdults = adults || 1;
 
-  // Handle special case for more than 4 adults
   if (numAdults > 4) {
     if (rates.FourthOccupancy && rates.ExtraAdultRate) {
       return rates.FourthOccupancy + (numAdults - 4) * rates.ExtraAdultRate;
     }
-    return rates.FourthOccupancy; // Fallback if no extra adult rate is defined
+    return rates.FourthOccupancy;
   }
 
-  // Use an object as a map for standard occupancy
   const occupancyMap = {
     1: rates.SingleOccupancy,
     2: rates.DoubleOccupancy,
@@ -36,7 +30,6 @@ const getRateForOccupancy = (rates, adults) => {
     4: rates.FourthOccupancy,
   };
 
-  // Return the rate from the map, or a fallback for invalid numbers (e.g., 0)
   return occupancyMap[numAdults] ?? rates.SingleOccupancy;
 };
 
@@ -49,31 +42,32 @@ function AllRooms() {
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
 
+  // CORRECTED STATE INITIALIZATION
   const [bookingDetails, setBookingDetails] = useState(() => {
     const homePageDetails = location.state?.initialBookingDetails;
-    if (homePageDetails && homePageDetails.checkIn && homePageDetails.checkOut) {
-      return homePageDetails;
-    }
     const savedDetails = sessionStorage.getItem(BOOKING_DETAILS_KEY);
-    if (savedDetails) {
-      try {
-        const parsedDetails = JSON.parse(savedDetails);
-        return {
-          ...parsedDetails,
-          checkIn: parsedDetails.checkIn ? new Date(parsedDetails.checkIn) : null,
-          checkOut: parsedDetails.checkOut ? new Date(parsedDetails.checkOut) : null,
-        };
-      } catch (e) {
-        console.error("Could not parse booking details from session storage", e);
-      }
-    }
-    return {
+    
+    const defaultDetails = {
       checkIn: null,
       checkOut: null,
       nights: 0,
       adults: 1,
       children: 0,
     };
+
+    try {
+      const detailsFromStorage = savedDetails ? JSON.parse(savedDetails) : {};
+      const mergedDetails = { ...defaultDetails, ...detailsFromStorage, ...homePageDetails };
+
+      return {
+        ...mergedDetails,
+        checkIn: mergedDetails.checkIn ? new Date(mergedDetails.checkIn) : null,
+        checkOut: mergedDetails.checkOut ? new Date(mergedDetails.checkOut) : null,
+      };
+    } catch (e) {
+      console.error("Could not parse booking details", e);
+      return defaultDetails;
+    }
   });
 
   const [cart, setCart] = useState(() => {
@@ -92,23 +86,18 @@ function AllRooms() {
     sessionStorage.setItem(BOOKING_DETAILS_KEY, JSON.stringify(bookingDetails));
     sessionStorage.setItem(BOOKING_CART_KEY, JSON.stringify(cart));
   }, [bookingDetails, cart]);
-  
 
-   useEffect(() => {
+ useEffect(() => {
     const fetchRoomRates = async () => {
       if (!bookingDetails.checkIn) {
-          setLoading(false);
-          setRooms([]);
-          return;
+        setLoading(false);
+        setRooms([]);
+        return;
       }
       setLoading(true);
       setError(null);
       try {
-        // const bookingDate = new Date(bookingDetails.checkIn).toISOString().split('T')[0];
-        
-        // Revert to sending a plain JavaScript object
         const requestBody = {
-          // ==> IMPORTANT: REPLACE WITH YOUR REAL CREDENTIALS <==
           "UserName": "bookinguser",
           "Password": "booking@123",
           "Parameter": "QWVYSS9QVTREQjNLYzd0bjRZRTg4dz09",
@@ -117,11 +106,11 @@ function AllRooms() {
 
         const response = await axios.post("/api/get_room_rates.php", requestBody);
         
-         console.log("RAW API RESPONSE:", response.data.result[0]);
+        console.log("RAW API RESPONSE:", response.data.result[0]);
 
         if (response.data?.result?.[0]?.Rooms) {
           const apiRooms = response.data.result[0].Rooms.map(room => ({
-            _id: room.RoomTypeID,
+            _id: String(room.RoomTypeID), // Ensure RoomTypeID is always a string
             title: room.RoomCategory.trim(), 
             description: room.Description,
             images: room.RoomImages,
@@ -155,19 +144,17 @@ function AllRooms() {
     fetchRoomRates();
   }, [bookingDetails.checkIn]);
 
-
   const filteredRooms = useMemo(() => {
     return rooms;
   }, [rooms]);
-
 
   const handleAddToCart = (baseRoom, mealOption) => {
     const pricePerNight = getRateForOccupancy(mealOption.Rates, bookingDetails.adults);
 
     if (pricePerNight === undefined || pricePerNight === null) {
-        console.error("Cannot add room to cart: Price is not available for the selected occupancy.", mealOption);
-        alert("This meal option is currently unavailable for the selected number of guests.");
-        return;
+      console.error("Cannot add room to cart: Price is not available for the selected occupancy.", mealOption);
+      alert("This meal option is currently unavailable for the selected number of guests.");
+      return;
     }
 
     const roomToAdd = {
@@ -216,15 +203,21 @@ function AllRooms() {
     return perNightTotal * totalNights;
   }, [cart, totalNights]);
 
-  const handleProceedToBooking = () => {
+ const handleProceedToBooking = () => {
     const bookingDataForState = {
-        rooms: cart.map(item => ({
-            roomId: item.room._id.split('-')[0],
-            title: item.room.title,
-            quantity: item.quantity,
-            pricePerNight: item.room.pricePerNight,
-            room: { maxOccupancy: item.room.maxCapacity || 4 }
-        })),
+        rooms: cart.map(item => {
+            const baseRoomId = item.room._id.split('-')[0];
+            const originalRoom = rooms.find(r => r._id === baseRoomId); // No more type conversion needed
+
+            return {
+                roomId: baseRoomId,
+                title: item.room.title,
+                quantity: item.quantity,
+                pricePerNight: item.room.pricePerNight,
+                room: { maxOccupancy: item.room.maxCapacity || 4 },
+                mealPlans: originalRoom ? originalRoom.mealPlans : []
+            };
+        }),
         dates: {
             checkIn: bookingDetails.checkIn,
             checkOut: bookingDetails.checkOut,
@@ -241,7 +234,7 @@ function AllRooms() {
       state: { bookingDetails: bookingDataForState }
     });
   };
-
+  
   const formatDate = (date) => {
     if (!date) return 'Not selected';
     return new Date(date).toLocaleDateString('en-GB', {
@@ -273,13 +266,12 @@ function AllRooms() {
             <div className="flex flex-row flex-nowrap items-center gap-x-3 sm:gap-x-4 text-xs lg:text-[14px] text-gray-600 min-w-0">
               <div className="truncate"><span className="font-semibold text-indigo-400">Check-In:</span> {formatDate(bookingDetails.checkIn)}</div>
               <div className="truncate"><span className="font-semibold text-indigo-400">Check-Out:</span> {formatDate(bookingDetails.checkOut)}</div>
-              {/* <div className="truncate"><span className="font-semibold text-indigo-400">Guests:</span> {bookingDetails.adults} Adults</div> */}
             </div>
             
             <div className="flex-shrink-0">
               <button
                 onClick={() => setIsEditing(true)}
-                className="md:hidden text-xs text-white font-semibold hover:underline"
+                className="md:hidden text-xs text-indigo-600 font-semibold hover:underline"
               >
                 Edit
               </button>

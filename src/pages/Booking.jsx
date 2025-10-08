@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'; // 1. Import useCallback
-import { useNavigate } from 'react-router-dom';
+// src/pages/Booking.jsx
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import Costcard from '../components/Costcard';
 import Guestcounter from '../components/Gueatcounter';
 import Guestinfo from '../components/Guestinfo';
 import BillingContact from '../components/BillingContact';
-import SessionTimer from '../components/SessionTimer';
-import { toast } from 'react-toastify';
+import axios from 'axios';
 
 const BOOKING_DETAILS_KEY = 'currentBookingDetails';
-const SESSION_EXPIRY_KEY = 'sessionExpiry';
 
-function Booking() {
-  const navigate = useNavigate();
+function Booking({ hotelData }) {
+  const location = useLocation();
   const [step, setStep] = useState('guest-count');
   const [bookingData, setBookingData] = useState({
     details: null,
@@ -20,37 +20,22 @@ function Booking() {
   });
   
   const [guestInformation, setGuestInformation] = useState(null);
-  const [sessionExpiry, setSessionExpiry] = useState(() => {
-    return sessionStorage.getItem(SESSION_EXPIRY_KEY);
-  });
 
-  // 2. Wrap the function in useCallback
-  const handleSessionExpiry = useCallback(() => {
-    setBookingData({ details: null, guestCounts: null, childrenAges: null });
-    setSessionExpiry(null);
-    sessionStorage.removeItem(BOOKING_DETAILS_KEY);
-    sessionStorage.removeItem('bookingCart');
-    sessionStorage.removeItem(SESSION_EXPIRY_KEY);
-    sessionStorage.removeItem('guestCounterFormState');
-    toast.error("Your booking session has expired. Redirecting...");
-    setTimeout(() => navigate('/allrooms'), 2000);
-  }, [navigate]);
+   // NEW STATE FOR TAX DATA
+  const [taxData, setTaxData] = useState(null);
 
   useEffect(() => {
-    const savedBookingDetails = sessionStorage.getItem(BOOKING_DETAILS_KEY);
-    if (!savedBookingDetails) {
-      handleSessionExpiry();
-    }
+    const initialDetails = location.state?.bookingDetails || JSON.parse(sessionStorage.getItem(BOOKING_DETAILS_KEY));
 
-    const expiryTime = sessionStorage.getItem(SESSION_EXPIRY_KEY);
-    if (!expiryTime || new Date().getTime() > expiryTime) {
-      handleSessionExpiry();
+    if (initialDetails) {
+        setBookingData(prev => ({ ...prev, details: initialDetails }));
+    } else {
+        console.error("No booking details found.");
     }
-  }, [handleSessionExpiry]); // 3. Add the function to the dependency array
-
-  // ... (the rest of the component remains the same)
-  const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraChildCost }) => {
+  }, [location.state]);
+const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraChildCost }) => {
     setBookingData(prev => {
+      // Create a new details object with the updated costs and preserve the original rooms data
       const updatedDetails = {
         ...prev.details,
         extraAdultCost,
@@ -67,9 +52,45 @@ function Booking() {
     setStep('guest-details');
   };
 
-  const handleGuestInfoChange = (info) => {
+
+    // ADD NEW USEEFFECT TO FETCH TAX DATA
+ useEffect(() => {
+
+    const req_body = { "UserName": "bookinguser", 
+                       "Password": "booking@123", 
+                       "Parameter": "QWVYSS9QVTREQjNLYzd0bjRZRTg4dz09" };
+
+    const fetchTaxes = async () => {
+      try {
+        const response = await axios.post("/api/get_taxes.php", req_body);
+
+        if (response.data && response.data.result && response.data.result[0].Taxes) {
+          const taxes = response.data.result[0].Taxes;
+          
+          // Calculate the total GST by summing up the percentages
+          const totalGstPercentage = taxes.reduce((sum, tax) => {
+            return sum + parseFloat(tax.Percentage);
+          }, 0);
+
+          // Store both the individual taxes and the calculated total
+          setTaxData({
+            taxes: taxes,
+            totalGstPercentage: totalGstPercentage,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch tax data:", error);
+      }
+    };
+
+    fetchTaxes();
+  }, []);
+
+
+  // Wrap this function in useCallback
+  const handleGuestInfoChange = useCallback((info) => {
     setGuestInformation(info);
-  };
+  }, []); // Empty dependency array means the function is created only once
   
   const handleBookingSubmit = (billingDetails) => {
     if (!bookingData.details || !guestInformation || !billingDetails) {
@@ -121,9 +142,18 @@ function Booking() {
     });
   }, [step, bookingData.details, bookingData.guestCounts, bookingData.childrenAges]);
 
+  if (!bookingData.details) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <div className="text-center">
+                <p className="text-lg font-semibold text-gray-700">Loading booking details...</p>
+            </div>
+        </div>
+    );
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen">
-       {sessionExpiry && <SessionTimer expiryTimestamp={sessionExpiry} onExpiry={handleSessionExpiry} />}
       <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         <div className="flex flex-col md:flex-row md:gap-6 lg:gap-8">
           <div className="w-full md:w-3/5 space-y-6">
@@ -159,7 +189,7 @@ function Booking() {
             <div className="lg:sticky lg:top-8 mt-6 md:mt-0">
               <section aria-labelledby="cost-summary-heading">
                   <h2 id="cost-summary-heading" className="sr-only">Cost Summary</h2>
-                  <Costcard bookingDetails={bookingData.details} />
+                  <Costcard bookingDetails={bookingData.details} hotelData={hotelData} taxData={taxData} />
               </section>
             </div>
           </div>

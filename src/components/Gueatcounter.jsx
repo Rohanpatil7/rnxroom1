@@ -7,13 +7,13 @@ const CHILD_AGE_LIMIT = 12; // A child older than 12 will incur an extra fee.
 
 // --- SVG Icons ---
 const MinusIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
         <path strokeLinecap="round" strokeLinejoin="round" d="M18 12H6" />
     </svg>
 );
 
 const PlusIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
     </svg>
 );
@@ -24,6 +24,10 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
     const [childrenAges, setChildrenAges] = useState({});
     const [occupancyErrors, setOccupancyErrors] = useState({});
     const [formErrors, setFormErrors] = useState({});
+
+    // Define the base number of adults included in the room price
+    const BASE_ADULT_OCCUPANCY = 2;
+
 
     useEffect(() => {
         const details = initialBookingDetails || JSON.parse(sessionStorage.getItem(BOOKING_DETAILS_KEY));
@@ -139,14 +143,24 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
             let extraChildCost = 0;
             const nights = bookingDetails.dates.nights || 0;
 
-            if (rooms && nights > 0) {
+            if (rooms && nights > 0) { // This now uses the correctly passed 'rooms' prop
                 Object.entries(guestCounts).forEach(([instanceId, counts]) => {
                     const roomId = instanceId.split('_')[0];
-                    const room = rooms.find(r => r._id === roomId);
+                    const room = rooms.find(r => r.roomId === roomId); // The lookup should now succeed
+                    
+                    // --- ADD THIS CONSOLE.LOG ---
+                    console.log("Found Room for Cost Calculation:", room); 
+
                     if (room && room.mealPlans && room.mealPlans.length > 0) {
-                        const rates = room.mealPlans[0].Rates; // Assuming the first meal plan's rates
-                        if (counts.adults > 2) {
-                            extraAdultCost += (counts.adults - 2) * (rates.ExtraAdultRate || 0) * nights;
+                        const rates = room.mealPlans[0].Rates; 
+
+                        // --- AND ADD THIS CONSOLE.LOG ---
+                        console.log("Rates Object:", rates); 
+
+                         // UPDATED LOGIC: Calculate cost for adults exceeding the base occupancy
+                        if (counts.adults > BASE_ADULT_OCCUPANCY) {
+                            const extraAdults = counts.adults - BASE_ADULT_OCCUPANCY;
+                            extraAdultCost += extraAdults * (rates.ExtraAdultRate || 0) * nights;
                         }
                         
                         const ages = childrenAges[instanceId] || [];
@@ -190,8 +204,8 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
         <div className="w-full max-w-3xl mx-auto p-4 font-sans">
             <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-xl">
                 <div className="mb-6 text-center">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Guest Details</h2>
-                    <p className="text-sm sm:text-base text-gray-500 mt-2">Specify the number of adults and children for each room.</p>
+                    <h2 className="text-xl sm:text-xl font-bold text-gray-900">Guest Details</h2>
+                    <p className="text-sm sm:text-xs text-gray-500 mt-2">Specify the number of adults and children for each room.</p>
                 </div>
 
                 <div className="space-y-6">
@@ -202,7 +216,7 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
                             <div key={instanceId} className="bg-gray-50 p-4 sm:p-5 rounded-xl border border-gray-200">
                                 <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-gray-200 pb-4 mb-4">
                                     <div>
-                                        <h4 className="text-lg sm:text-xl font-semibold text-gray-800">{details.title}</h4>
+                                        <h4 className="text-md sm:text-md font-semibold text-gray-800">{details.title}</h4>
                                         <p className="text-sm text-gray-500 mt-1">
                                             Room {instanceNum} | Max Occupancy: {details.room.maxOccupancy} guests
                                         </p>
@@ -212,10 +226,10 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
                                     </div>
                                 </div>
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                     {/* Adults Counter */}
                                     <div className="flex items-center justify-between gap-1">
-                                        <label className="text-base font-medium text-gray-700">Adults</label>
+                                        <label className="text-sm font-medium text-gray-700">Adults</label>
                                         <div className="flex items-center gap-3">
                                             <button 
                                                 onClick={() => handleCountChange(instanceId, 'adults', -1, details.room.maxOccupancy)} 
@@ -236,7 +250,7 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
                                     </div>
                                     {/* Children Counter */}
                                     <div className="flex items-center justify-between gap-1">
-                                        <label className="text-base font-medium text-gray-700">Children</label>
+                                        <label className="text-sm font-medium text-gray-700">Children</label>
                                         <div className="flex items-center gap-3">
                                             <button 
                                                 onClick={() => handleCountChange(instanceId, 'children', -1, details.room.maxOccupancy)} 
@@ -266,7 +280,7 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
                                 
                                 {childrenAges[instanceId] && childrenAges[instanceId].length > 0 && (
                                     <div className="mt-4 pt-4 border-t border-gray-200">
-                                        <h5 className="text-base font-medium text-gray-700 mb-3">Children's Ages</h5>
+                                        <h5 className="text-sm font-medium text-gray-700 mb-3">Children's Ages</h5>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                             {childrenAges[instanceId].map((age, index) => (
                                                 <div key={index}>
@@ -283,7 +297,7 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
                                                         max="17"
                                                     />
                                                      {age > CHILD_AGE_LIMIT && (
-                                                        <p className="text-xs text-orange-600 mt-1">Extra guest fee may apply.</p>
+                                                        <p className="text-xs text-orange-600 mt-1">Extra fee may apply.</p>
                                                     )}
                                                 </div>
                                             ))}
