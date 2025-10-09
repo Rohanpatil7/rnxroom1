@@ -31,7 +31,7 @@ function Roomcard({ room, bookingDetails, onAddToCart }) {
 
   return (
     <div className="relative bg-white rounded-lg shadow-md overflow-hidden flex flex-col md:flex-row mb-6 border border-gray-200">
-      <div className="w-full md:w-1/3 p-4 border-r border-gray-200 flex flex-col">
+    <div className="w-full md:w-1/3 p-4 border-r border-gray-200 flex flex-col">
       <div className="sticky top-0 bg-white z-10 text-md font-bold text-gray-800 pb-2">
         <h3 className="">{room.title}</h3>
       </div>
@@ -66,9 +66,9 @@ function Roomcard({ room, bookingDetails, onAddToCart }) {
       </div>
 
       <div className="w-full md:w-2/3 flex flex-col ">
-        <div className="flex bg-gray-50 p-2 border-b border-gray-200 flex-shrink-0">
-          <div className="w-2/3 font-semibold text-gray-700 text-center">Room Options</div>
-          <div className="w-1/3 font-semibold text-gray-700  pr-4 text-center">Price</div>
+        <div className="flex bg-gray-50 p-2 border-b border-gray-200 flex-shrink-0 justify-around items-center">
+          <div className="w-2/3 font-semibold text-gray-700 text-left pl-2">Room Options</div>
+          <div className="w-1/3 font-semibold text-gray-700  pr-4 text-right">Price</div>
         </div>
         
         <div className="overflow-y-auto max-h-[450px] scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-indigo-100">

@@ -160,7 +160,7 @@ export default function DatePricePicker({
     for (let i = 1; i <= daysInMonth; i++) {
       const day = new Date(year, month, i);
 
-      let classes = "aspect-square flex flex-col items-center justify-center rounded-lg cursor-pointer transition-colors duration-200 text-xs sm:text-sm sm:w-full text-black";
+      let classes = "aspect-square flex flex-col items-center justify-center rounded-md cursor-pointer transition-colors duration-200 text-xs sm:text-sm sm:w-full text-black";
       const isPast = day < today;
       const isToday = day.getTime() === today.getTime();
       const isCheckIn = checkInDate && day.getTime() === new Date(checkInDate).getTime();
@@ -190,7 +190,7 @@ export default function DatePricePicker({
     }
     
     return (
-      <div className="absolute top-20 mt-2 w-full max-w-12xl sm:w-8xl left-1/2 -translate-x-1/2 md:w-auto md:max-w-full md:left-0 md:translate-x-0 bg-white p-4 rounded-lg shadow-2xl shadow-indigo-300 border border-gray-200 z-50">
+      <div className="absolute top-20 mt-2 w-full max-w-12xl sm:w-8xl left-1/2 -translate-x-1/2 md:w-auto md:max-w-full md:left-0 md:translate-x-0 bg-white p-4 rounded-md shadow-2xl shadow-indigo-300 border border-gray-200 z-50">
         <div className="flex items-center justify-between mb-4">
           <button type="button" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 rounded-full hover:bg-gray-100">
             <ChevronLeftIcon />
@@ -218,14 +218,14 @@ export default function DatePricePicker({
   return (
     <div className="w-full  flex items-start justify-center px-4 sm:px-1 font-sans">
       <div ref={pickerRef} className="relative w-full  max-w-3xl">
-        <div className="bg-white rounded-xl md:rounded-full shadow-lg p-2 flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-1 w-full">
+        <div className="bg-white rounded-md md:rounded-md shadow-lg p-2 flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-1 w-full">
           
           {/* Check-in */}
-          <div onClick={() => { setIsCalendarOpen(true);  }} className="flex-1 w-full p-2 rounded-full hover:bg-gray-100 cursor-pointer text-left">
-            <label className="text-xs font-bold text-gray-500 px-2">Check-in</label>
+          <div onClick={() => { setIsCalendarOpen(true);  }} className="flex-1 w-full p-2 rounded-md hover:bg-gray-100 cursor-pointer text-left">
+            <label className="text-xs font-bold text-gray-700 px-2">Check-in</label>
             <div className="flex items-center space-x-2 px-2">
               <CalendarIcon />
-              <span className={`text-sm ${checkInDate ? 'text-gray-800' : 'text-gray-400'}`}>
+              <span className={`text-md font-semibold ${checkInDate ? 'text-gray-800' : 'text-gray-400'}`}>
                 {checkInDate ? formatDate(checkInDate) : 'Add date'}
               </span>
             </div>
@@ -234,11 +234,11 @@ export default function DatePricePicker({
           <div className="h-px w-full bg-gray-200 md:h-8 md:w-px"></div>
 
           {/* Check-out */}
-          <div onClick={() => { setIsCalendarOpen(true);  }} className="flex-1 w-full p-2 rounded-full hover:bg-gray-100 cursor-pointer text-left">
-            <label className="text-xs font-bold text-gray-500 px-2">Check-out</label>
+          <div onClick={() => { setIsCalendarOpen(true);  }} className="flex-1 w-full p-2 rounded-md hover:bg-gray-100 cursor-pointer text-left">
+            <label className="text-xs font-bold text-gray-700 px-2">Check-out</label>
             <div className="flex items-center space-x-2 px-2">
               <CalendarIcon />
-              <span className={`text-sm ${checkOutDate ? 'text-gray-800' : 'text-gray-400'}`}>
+              <span className={`text-md font-semibold ${checkOutDate ? 'text-gray-800' : 'text-gray-400'}`}>
                 {checkOutDate ? formatDate(checkOutDate) : 'Add date'}
               </span>
             </div>

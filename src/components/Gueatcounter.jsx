@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+// src/components/Gueatcounter.jsx
+
+import React, { useState,  } from 'react';
 
 // --- CONSTANTS ---
-const BOOKING_DETAILS_KEY = 'currentBookingDetails';
-const GUEST_FORM_STATE_KEY = 'guestCounterFormState';
-const CHILD_AGE_LIMIT = 12; // A child older than 12 will incur an extra fee.
+const CHILD_AGE_LIMIT = 12;
 
-// --- SVG Icons ---
+// --- SVG Icons (no change) ---
 const MinusIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
         <path strokeLinecap="round" strokeLinejoin="round" d="M18 12H6" />
@@ -18,50 +18,18 @@ const PlusIcon = () => (
     </svg>
 );
 
-const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms }) => {
-    const [bookingDetails, setBookingDetails] = useState(null);
-    const [guestCounts, setGuestCounts] = useState({});
-    const [childrenAges, setChildrenAges] = useState({});
+// MODIFIED: Simplified props for the controlled component
+const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, onConfirm }) => {
+    // MODIFIED: State is initialized directly from props
+    const [guestCounts, setGuestCounts] = useState(initialGuestCounts || {});
+    const [childrenAges, setChildrenAges] = useState(initialChildrenAges || {});
     const [occupancyErrors, setOccupancyErrors] = useState({});
     const [formErrors, setFormErrors] = useState({});
 
-    // Define the base number of adults included in the room price
     const BASE_ADULT_OCCUPANCY = 2;
 
-
-    useEffect(() => {
-        const details = initialBookingDetails || JSON.parse(sessionStorage.getItem(BOOKING_DETAILS_KEY));
-        
-        if (details && details.rooms) {
-            setBookingDetails(details);
-            const validInstanceIds = details.rooms.flatMap(room => 
-                Array.from({ length: room.quantity }).map((_, i) => `${room.roomId}_${i}`)
-            );
-            const savedFormState = JSON.parse(sessionStorage.getItem(GUEST_FORM_STATE_KEY));
-            const initialCounts = {};
-            const initialAges = {};
-
-            validInstanceIds.forEach(instanceId => {
-                if (savedFormState?.guestCounts?.[instanceId]) {
-                    initialCounts[instanceId] = savedFormState.guestCounts[instanceId];
-                    initialAges[instanceId] = savedFormState.childrenAges?.[instanceId] || [];
-                } else {
-                    initialCounts[instanceId] = { adults: 1, children: 0 };
-                    initialAges[instanceId] = [];
-                }
-            });
-            
-            setGuestCounts(initialCounts);
-            setChildrenAges(initialAges);
-        }
-    }, [initialBookingDetails]);
-
-    useEffect(() => {
-        if (bookingDetails) {
-            const formState = { guestCounts, childrenAges };
-            sessionStorage.setItem(GUEST_FORM_STATE_KEY, JSON.stringify(formState));
-        }
-    }, [guestCounts, childrenAges, bookingDetails]);
+    // MODIFIED: Removed all useEffect hooks that dealt with sessionStorage.
+    // The component's state is now always in sync with its parent.
 
     const handleCountChange = (instanceId, type, delta, maxOccupancy) => {
         setGuestCounts(prevCounts => {
@@ -72,8 +40,7 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
                 return prevCounts;
             }
 
-            const totalGuests = (type === 'adults' ? newCount : currentCounts.adults) + 
-                                (type === 'children' ? newCount : currentCounts.children);
+            const totalGuests = (type === 'adults' ? newCount : currentCounts.adults) + (type === 'children' ? newCount : currentCounts.children);
 
             if (totalGuests > maxOccupancy) {
                 setOccupancyErrors(prevErrors => ({
@@ -89,10 +56,7 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
                 return newErrors;
             });
 
-            const updatedCounts = {
-                ...prevCounts,
-                [instanceId]: { ...currentCounts, [type]: newCount }
-            };
+            const updatedCounts = { ...prevCounts, [instanceId]: { ...currentCounts, [type]: newCount } };
 
             if (type === 'children') {
                 setChildrenAges(prevAges => {
@@ -101,7 +65,6 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
                     return { ...prevAges, [instanceId]: newAges };
                 });
             }
-
             return updatedCounts;
         });
     };
@@ -128,9 +91,7 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
 
         Object.keys(guestCounts).forEach(instanceId => {
             const ages = childrenAges[instanceId] || [];
-            const hasInvalidAge = ages.some(age => age === '' || age === null || parseInt(age, 10) <= 0);
-
-            if (hasInvalidAge) {
+            if (ages.some(age => age === '' || age === null || parseInt(age, 10) <= 0)) {
                 newErrors[instanceId] = "Please enter a valid age for each child.";
                 formIsValid = false;
             }
@@ -141,23 +102,15 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
         if (formIsValid) {
             let extraAdultCost = 0;
             let extraChildCost = 0;
-            const nights = bookingDetails.dates.nights || 0;
+            const nights = dates?.nights || 0;
 
-            if (rooms && nights > 0) { // This now uses the correctly passed 'rooms' prop
+            if (rooms && nights > 0) {
                 Object.entries(guestCounts).forEach(([instanceId, counts]) => {
                     const roomId = instanceId.split('_')[0];
-                    const room = rooms.find(r => r.roomId === roomId); // The lookup should now succeed
+                    const room = rooms.find(r => r.roomId === roomId);
                     
-                    // --- ADD THIS CONSOLE.LOG ---
-                    console.log("Found Room for Cost Calculation:", room); 
-
                     if (room && room.mealPlans && room.mealPlans.length > 0) {
-                        const rates = room.mealPlans[0].Rates; 
-
-                        // --- AND ADD THIS CONSOLE.LOG ---
-                        console.log("Rates Object:", rates); 
-
-                         // UPDATED LOGIC: Calculate cost for adults exceeding the base occupancy
+                        const rates = room.mealPlans[0].Rates;
                         if (counts.adults > BASE_ADULT_OCCUPANCY) {
                             const extraAdults = counts.adults - BASE_ADULT_OCCUPANCY;
                             extraAdultCost += extraAdults * (rates.ExtraAdultRate || 0) * nights;
@@ -174,16 +127,15 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
             }
             
             if (onConfirm) {
+                // Lifts the complete state up to the Booking page
                 onConfirm({ guestCounts, childrenAges, extraAdultCost, extraChildCost });
-            } else {
-                alert("Guest details have been confirmed!");
             }
         } else {
             console.log("Form has validation errors.", newErrors);
         }
     };
 
-    if (!bookingDetails || !bookingDetails.rooms || bookingDetails.rooms.length === 0) {
+    if (!rooms || rooms.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center p-8 text-center bg-white rounded-2xl shadow-lg mt-4 max-w-3xl mx-auto">
                 <h3 className="text-2xl font-bold text-gray-800">Guest Information</h3>
@@ -192,14 +144,14 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
         );
     }
     
-    const roomInstances = bookingDetails.rooms.flatMap(room => 
+    const roomInstances = rooms.flatMap(room => 
         Array.from({ length: room.quantity }).map((_, i) => ({
             instanceId: `${room.roomId}_${i}`,
             details: room,
             instanceNum: i + 1
         }))
     );
-
+    // (The rest of the JSX for rendering the form remains the same)
     return (
         <div className="w-full max-w-3xl mx-auto p-4 font-sans">
             <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-xl">
@@ -327,6 +279,7 @@ const Guestcounter = ({ bookingDetails: initialBookingDetails, onConfirm, rooms 
             </div>
         </div>
     );
+
 };
 
 export default Guestcounter;

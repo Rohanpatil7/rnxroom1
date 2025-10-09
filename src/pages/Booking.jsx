@@ -6,7 +6,7 @@ import Costcard from '../components/Costcard';
 import Guestcounter from '../components/Gueatcounter';
 import Guestinfo from '../components/Guestinfo';
 import BillingContact from '../components/BillingContact';
-import axios from 'axios';
+import { getTaxes } from '../api/api_services';
 
 const BOOKING_DETAILS_KEY = 'currentBookingDetails';
 
@@ -15,33 +15,52 @@ function Booking({ hotelData }) {
   const [step, setStep] = useState('guest-count');
   const [bookingData, setBookingData] = useState({
     details: null,
-    guestCounts: null,
-    childrenAges: null,
+    guestCounts: {},
+    childrenAges: {},
   });
   
   const [guestInformation, setGuestInformation] = useState(null);
-
-   // NEW STATE FOR TAX DATA
   const [taxData, setTaxData] = useState(null);
 
   useEffect(() => {
     const initialDetails = location.state?.bookingDetails || JSON.parse(sessionStorage.getItem(BOOKING_DETAILS_KEY));
-
     if (initialDetails) {
-        setBookingData(prev => ({ ...prev, details: initialDetails }));
+        const initialCounts = {};
+        const initialAges = {};
+        if (initialDetails.rooms) {
+            initialDetails.rooms.forEach(room => {
+                for (let i = 0; i < room.quantity; i++) {
+                    const instanceId = `${room.roomId}_${i}`;
+                    initialCounts[instanceId] = { adults: 1, children: 0 };
+                    initialAges[instanceId] = [];
+                }
+            });
+        }
+        setBookingData({
+            details: initialDetails,
+            guestCounts: initialCounts,
+            childrenAges: initialAges,
+        });
     } else {
         console.error("No booking details found.");
     }
   }, [location.state]);
-const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraChildCost }) => {
+
+  // --- MODIFIED SECTION ---
+  const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraChildCost }) => {
     setBookingData(prev => {
-      // Create a new details object with the updated costs and preserve the original rooms data
+      // Create a new, updated details object with the extra costs
       const updatedDetails = {
         ...prev.details,
         extraAdultCost,
         extraChildCost,
       };
 
+      // ✅ FIX: Save the complete, updated details back to session storage
+      // This ensures the costs persist and the UI stays in sync.
+      sessionStorage.setItem(BOOKING_DETAILS_KEY, JSON.stringify(updatedDetails));
+
+      // Return the new state for the component
       return {
         ...prev,
         details: updatedDetails,
@@ -51,47 +70,32 @@ const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraCh
     });
     setStep('guest-details');
   };
+  // --- END OF MODIFIED SECTION ---
 
-
-    // ADD NEW USEEFFECT TO FETCH TAX DATA
- useEffect(() => {
-
-    const req_body = { "UserName": "bookinguser", 
-                       "Password": "booking@123", 
-                       "Parameter": "QWVYSS9QVTREQjNLYzd0bjRZRTg4dz09" };
-
+  useEffect(() => {
     const fetchTaxes = async () => {
       try {
-        const response = await axios.post("/api/get_taxes.php", req_body);
-
-        if (response.data && response.data.result && response.data.result[0].Taxes) {
-          const taxes = response.data.result[0].Taxes;
-          
-          // Calculate the total GST by summing up the percentages
-          const totalGstPercentage = taxes.reduce((sum, tax) => {
-            return sum + parseFloat(tax.Percentage);
-          }, 0);
-
-          // Store both the individual taxes and the calculated total
+        const data = await getTaxes();
+        if (data?.result?.[0]?.Taxes) {
+          const taxes = data.result[0].Taxes;
           setTaxData({
             taxes: taxes,
-            totalGstPercentage: totalGstPercentage,
+            totalGstPercentage: taxes.reduce((sum, tax) => sum + parseFloat(tax.Percentage), 0),
           });
+        } else {
+          console.warn("Tax data not found in the expected format.", data);
         }
       } catch (error) {
         console.error("Failed to fetch tax data:", error);
       }
     };
-
     fetchTaxes();
   }, []);
-
-
-  // Wrap this function in useCallback
+  
   const handleGuestInfoChange = useCallback((info) => {
     setGuestInformation(info);
-  }, []); // Empty dependency array means the function is created only once
-  
+  }, []);
+
   const handleBookingSubmit = (billingDetails) => {
     if (!bookingData.details || !guestInformation || !billingDetails) {
       alert("Please ensure all booking information is complete.");
@@ -99,9 +103,10 @@ const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraCh
     }
 
     const { totalPrice, extraAdultCost = 0, extraChildCost = 0 } = bookingData.details;
-    const gstAmount = (totalPrice + extraAdultCost + extraChildCost) * 0.12;
+    const taxableAmount = totalPrice + extraAdultCost + extraChildCost;
     const serviceFee = 299;
-    const grandTotal = totalPrice + extraAdultCost + extraChildCost + gstAmount + serviceFee;
+    const totalGstAmount = taxData?.taxes?.reduce((sum, tax) => sum + (taxableAmount * (parseFloat(tax.Percentage) / 100)), 0) || 0;
+    const grandTotal = taxableAmount + totalGstAmount + serviceFee;
 
     const finalBookingPayload = {
       stayDetails: bookingData.details,
@@ -113,7 +118,7 @@ const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraCh
         totalRoomCost: totalPrice,
         extraAdultCost,
         extraChildCost,
-        gstAmount,
+        gstAmount: totalGstAmount,
         serviceFee,
         grandTotal,
       },
@@ -127,27 +132,24 @@ const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraCh
     if (step !== 'guest-details' || !bookingData.details || !bookingData.guestCounts) {
       return [];
     }
-    const roomTitleMap = new Map(
-      bookingData.details.rooms.map(room => [room.roomId, room.title])
+    const roomInstanceDetails = bookingData.details.rooms.flatMap(room => 
+      Array.from({ length: room.quantity }).map((_, i) => ({
+        instanceId: `${room.roomId}_${i}`,
+        title: room.title
+      }))
     );
-    return Object.entries(bookingData.guestCounts).map(([instanceId, counts]) => {
-      const lastUnderscoreIndex = instanceId.lastIndexOf('_');
-      const roomId = instanceId.slice(0, lastUnderscoreIndex);
-      return {
-        instanceId,
-        title: roomTitleMap.get(roomId) || 'Room',
-        counts,
-        childrenAges: bookingData.childrenAges?.[instanceId] || [],
-      };
-    });
+    return roomInstanceDetails.map(({ instanceId, title }) => ({
+      instanceId,
+      title,
+      counts: bookingData.guestCounts[instanceId] || { adults: 1, children: 0 },
+      childrenAges: bookingData.childrenAges?.[instanceId] || [],
+    }));
   }, [step, bookingData.details, bookingData.guestCounts, bookingData.childrenAges]);
 
   if (!bookingData.details) {
     return (
-        <div className="flex items-center justify-center h-screen">
-            <div className="text-center">
-                <p className="text-lg font-semibold text-gray-700">Loading booking details...</p>
-            </div>
+        <div className="flex items-center justify-center h-screen text-xl font-semibold">
+            Loading booking details...
         </div>
     );
   }
@@ -161,9 +163,11 @@ const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraCh
               <section aria-labelledby="guest-counter-heading">
                 <h2 id="guest-counter-heading" className="sr-only">Guest and Room Selection</h2>
                 <Guestcounter 
-                  bookingDetails={bookingData.details}
-                  onConfirm={handleGuestConfirm}
                   rooms={bookingData.details?.rooms}
+                  dates={bookingData.details?.dates}
+                  initialGuestCounts={bookingData.guestCounts}
+                  initialChildrenAges={bookingData.childrenAges}
+                  onConfirm={handleGuestConfirm}
                 />
               </section>
             )}

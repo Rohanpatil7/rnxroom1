@@ -1,61 +1,69 @@
-// src/App.jsx
-
-import React from 'react';
-import Navbar from './components/Navbar.jsx';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { useEffect, useState } from "react";
-import axios from "axios";
-import AllRooms from './pages/AllRooms.jsx';
+import Navbar from './components/Navbar.jsx';
 import Home from './pages/Home.jsx';
+import AllRooms from './pages/AllRooms.jsx';
 import Booking from './pages/Booking.jsx';
+// This import is crucial. It uses the centralized API service.
+import { getHotelDetails } from './api/api_services.js';
 
 function App() {
   const [hotelData, setHotelData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [bookingDetails, setBookingDetails] = useState(null);
-
+  
   useEffect(() => {
-    // Revert to sending a plain JavaScript object
-    const requestBody = {
-      // ==> IMPORTANT: REPLACE WITH YOUR REAL CREDENTIALS <==
-      "UserName": "bookinguser",
-      "Password": "booking@123",
-      "Parameter": "QWVYSS9QVTREQjNLYzd0bjRZRTg4dz09",
+    // Using an async function inside useEffect is the modern standard for fetching data.
+    const fetchHotelData = async () => {
+      try {
+        setLoading(true);
+        // Call the centralized API function. This function should use the proxy.
+        const data = await getHotelDetails();
+
+        // Check the response structure for data or an error message from the API.
+        if (data?.result?.[0]) {
+          if (data.result[0].Error) {
+            setError(`API Error: ${data.result[0].Error}`);
+          } else {
+            setHotelData(data.result[0]);
+            setError(null); // Clear previous errors on success
+          }
+        } else {
+          // Handle cases where the response format is unexpected.
+          setError("Received invalid data format from the hotel details API.");
+        }
+      } catch (err) {
+        // This catches network errors (like the CORS issue) or other exceptions.
+        console.error("Failed to fetch hotel data:", err);
+        setError(err.message || 'An unknown network error occurred. Please check the console.');
+      } finally {
+        // Ensure loading is set to false whether the call succeeds or fails.
+        setLoading(false);
+      }
     };
 
-    axios.post("/api/get_hotel_details.php", requestBody)
-      .then((response) => {
-        if (response.data && response.data.result && response.data.result.length > 0) {
-          setHotelData(response.data.result[0]);
-        } else if (response.data?.result?.[0]?.Error) {
-          setError(response.data.result[0].Error);
-        } else {
-          setError("Received invalid data format from API.");
-        }
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (err.response) {
-          setError(`Error: ${err.response.status} - ${err.response.data?.error || err.message}`);
-        } else {
-          setError(err.message);
-        }
-        setLoading(false);
-      });
-  }, []);
+    fetchHotelData();
+  }, []); // The empty dependency array [] ensures this effect runs only once when the component mounts.
 
-  if (loading) return <div className="status">Loading...</div>;
-  if (error) return <div className="status error">Error: {error}</div>;
+  // Render a loading state while the API call is in progress.
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen text-xl font-semibold">Loading Hotel Information...</div>;
+  }
+
+  // Render an error message if the API call fails.
+  if (error) {
+    return <div className="flex items-center justify-center h-screen text-xl font-semibold text-red-600">Error: {error}</div>;
+  }
 
   return (
-    <div className='bg-gray-50 '>
-       <Navbar hotelData={hotelData} loading={loading} error={error} />
+    <div className='bg-gray-50'>
+      <Navbar hotelData={hotelData} />
       <div className='h-fit relative'>
         <Routes>
-          <Route path='/' element={<Home hotelData={hotelData} loading={loading} error={error} setBookingDetails={setBookingDetails} />} />
-          <Route path='/allrooms' element={<AllRooms  hotelData={hotelData} loading={loading} error={error} setBookingDetails={setBookingDetails} />} />
-          <Route path='/booking/new' element={<Booking hotelData={hotelData} loading={loading} error={error} bookingDetails={bookingDetails}  />} />
+          {/* Pass hotelData to the routes that need it. */}
+          <Route path='/' element={<Home hotelData={hotelData} />} />
+          <Route path='/allrooms' element={<AllRooms />} />
+          <Route path='/booking/new' element={<Booking hotelData={hotelData} />} />
         </Routes>
       </div>
     </div>
@@ -63,3 +71,4 @@ function App() {
 }
 
 export default App;
+

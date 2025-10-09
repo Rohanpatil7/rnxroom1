@@ -1,17 +1,28 @@
-// src/pages/AllRooms.jsx
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Roomcard from '../components/Roomcard';
 import DatePricePicker from '../components/DatePricePicker';
 import BookingCart from '../components/BookingCart';
-import axios from 'axios';
+// ✅ Import the centralized API service function
+import { getRoomRates } from '../api/api_services.js';
 
 // --- SESSION: Define keys for storing booking data ---
 const BOOKING_CART_KEY = 'bookingCart';
 const BOOKING_DETAILS_KEY = 'bookingDetails';
 
-// --- HELPER (REFACTORED): Determines rate using an object lookup ---
+// --- HELPER: Formats a Date object into 'YYYY-MM-DD' for the API ---
+const formatDateForApi = (date) => {
+  if (!date) return null;
+  const d = new Date(date);
+  const year = d.getFullYear();
+  // Pad month and day with a leading zero if needed
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+
+// --- HELPER: Determines rate using an object lookup ---
 const getRateForOccupancy = (rates, adults) => {
   if (!rates) return null;
   const numAdults = adults || 1;
@@ -41,16 +52,31 @@ function AllRooms() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [hasRoomsButNoRates, setHasRoomsButNoRates] = useState(false);
 
-  // CORRECTED STATE INITIALIZATION
   const [bookingDetails, setBookingDetails] = useState(() => {
     const homePageDetails = location.state?.initialBookingDetails;
     const savedDetails = sessionStorage.getItem(BOOKING_DETAILS_KEY);
     
+    const getTomorrow = () => {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0); 
+        return tomorrow;
+    };
+
+    const getDayAfterTomorrow = () => {
+        const tomorrow = getTomorrow();
+        const dayAfter = new Date(tomorrow);
+        dayAfter.setDate(dayAfter.getDate() + 1);
+        return dayAfter;
+    };
+
     const defaultDetails = {
-      checkIn: null,
-      checkOut: null,
-      nights: 0,
+      checkIn: getTomorrow(),
+      checkOut: getDayAfterTomorrow(),
+      nights: 1,
       adults: 1,
       children: 0,
     };
@@ -61,8 +87,8 @@ function AllRooms() {
 
       return {
         ...mergedDetails,
-        checkIn: mergedDetails.checkIn ? new Date(mergedDetails.checkIn) : null,
-        checkOut: mergedDetails.checkOut ? new Date(mergedDetails.checkOut) : null,
+        checkIn: mergedDetails.checkIn ? new Date(mergedDetails.checkIn) : defaultDetails.checkIn,
+        checkOut: mergedDetails.checkOut ? new Date(mergedDetails.checkOut) : defaultDetails.checkOut,
       };
     } catch (e) {
       console.error("Could not parse booking details", e);
@@ -87,54 +113,63 @@ function AllRooms() {
     sessionStorage.setItem(BOOKING_CART_KEY, JSON.stringify(cart));
   }, [bookingDetails, cart]);
 
- useEffect(() => {
+  useEffect(() => {
     const fetchRoomRates = async () => {
-      if (!bookingDetails.checkIn) {
+      const checkInDate = formatDateForApi(bookingDetails.checkIn);
+
+      if (!checkInDate) {
         setLoading(false);
         setRooms([]);
         return;
       }
       setLoading(true);
       setError(null);
+      setHasRoomsButNoRates(false); 
       try {
-        const requestBody = {
-          "UserName": "bookinguser",
-          "Password": "booking@123",
-          "Parameter": "QWVYSS9QVTREQjNLYzd0bjRZRTg4dz09",
-          "BookingDate": "2025-10-01"
-        };
-
-        const response = await axios.post("/api/get_room_rates.php", requestBody);
+        const params = { BookingDate: checkInDate };
+        const responseData = await getRoomRates(params);
         
-        console.log("RAW API RESPONSE:", response.data.result[0]);
+        console.log("RAW API RESPONSE:", responseData);
 
-        if (response.data?.result?.[0]?.Rooms) {
-          const apiRooms = response.data.result[0].Rooms.map(room => ({
-            _id: String(room.RoomTypeID), // Ensure RoomTypeID is always a string
-            title: room.RoomCategory.trim(), 
-            description: room.Description,
-            images: room.RoomImages,
-            amenities: room.Amenities || [], 
-            roomPolicies: room.roomPolicies || [], 
-            mealPlans: room.MealPlans,
-            pricePerNight: room.MealPlans?.[0]?.Rates?.SingleOccupancy,
-            remainingRooms: 10,
-            maxCapacity: 4,
-          }));
-          setRooms(apiRooms);
-        } else if (response.data?.result?.[0]?.Error) {
-          setError(response.data.result[0].Error);
+        if (responseData?.result?.[0]?.Rooms) {
+          const allApiRooms = responseData.result[0].Rooms;
+          
+          // ✅ FIX: This logic now correctly filters out rooms and meal plans that have no available rates.
+          const availableRooms = allApiRooms
+            .map(room => {
+              // First, only keep meal plans that have a valid 'Rates' object.
+              const availableMealPlans = room.MealPlans?.filter(plan => plan.Rates) || [];
+              return {
+                _id: String(room.RoomTypeID),
+                title: room.RoomCategory.trim(),
+                description: room.Description,
+                images: room.RoomImages || [],
+                amenities: room.Amenities || [],
+                roomPolicies: room.roomPolicies || [],
+                mealPlans: availableMealPlans, // Use the filtered list of plans
+                pricePerNight: availableMealPlans[0]?.Rates?.SingleOccupancy ?? 0,
+                remainingRooms: 10,
+                maxCapacity: 4,
+              };
+            })
+            // Second, only keep rooms that have at least one bookable meal plan left.
+            .filter(room => room.mealPlans.length > 0);
+
+          if (allApiRooms.length > 0 && availableRooms.length === 0) {
+            setHasRoomsButNoRates(true);
+          }
+
+          setRooms(availableRooms);
+
+        } else if (responseData?.result?.[0]?.Error) {
+          setError(responseData.result[0].Error);
           setRooms([]);
         } else {
-          setError("Invalid data format from room rates API.");
+          setError("Could not find room data in the API response.");
           setRooms([]);
         }
       } catch (err) {
-        if (err.response) {
-            setError(`Error: ${err.response.status} - ${err.response.data?.error || err.message}`);
-        } else {
-            setError(err.message || 'An unknown error occurred.');
-        }
+        setError(err.message || 'An unknown error occurred.');
         setRooms([]);
       } finally {
         setLoading(false);
@@ -144,6 +179,13 @@ function AllRooms() {
     fetchRoomRates();
   }, [bookingDetails.checkIn]);
 
+  useEffect(() => {
+    if (!loading && rooms.length === 0) {
+      setIsEditing(true);
+    }
+  }, [loading, rooms]);
+
+
   const filteredRooms = useMemo(() => {
     return rooms;
   }, [rooms]);
@@ -152,7 +194,6 @@ function AllRooms() {
     const pricePerNight = getRateForOccupancy(mealOption.Rates, bookingDetails.adults);
 
     if (pricePerNight === undefined || pricePerNight === null) {
-      console.error("Cannot add room to cart: Price is not available for the selected occupancy.", mealOption);
       alert("This meal option is currently unavailable for the selected number of guests.");
       return;
     }
@@ -207,7 +248,7 @@ function AllRooms() {
     const bookingDataForState = {
         rooms: cart.map(item => {
             const baseRoomId = item.room._id.split('-')[0];
-            const originalRoom = rooms.find(r => r._id === baseRoomId); // No more type conversion needed
+            const originalRoom = rooms.find(r => r._id === baseRoomId);
 
             return {
                 roomId: baseRoomId,
@@ -262,32 +303,30 @@ function AllRooms() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-row justify-between items-center gap-4">
+          <div className="flex flex-row justify-center items-center gap-4">
             <div className="flex flex-row flex-nowrap items-center gap-x-3 sm:gap-x-4 text-xs lg:text-[14px] text-gray-600 min-w-0">
               <div className="truncate"><span className="font-semibold text-indigo-400">Check-In:</span> {formatDate(bookingDetails.checkIn)}</div>
               <div className="truncate"><span className="font-semibold text-indigo-400">Check-Out:</span> {formatDate(bookingDetails.checkOut)}</div>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="md:hidden justify-start text-xs text-indigo-600 font-semibold hover:underline"
+              >
+                Edit 
+              </button>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="hidden md:block px-4 py-1.5 text-sm font-medium text-indigo-600  outline-indigo-500 rounded-md hover:bg-blue-700 hover:text-white"
+              >
+                Edit Dates
+              </button>
             </div>
             
-            <div className="flex-shrink-0">
-              <button
-                onClick={() => setIsEditing(true)}
-                className="md:hidden text-xs text-indigo-600 font-semibold hover:underline"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => setIsEditing(true)}
-                className="hidden md:block px-4 py-1.5 text-xs font-medium text-indigo-600 outline outline-indigo-500 rounded-md hover:bg-blue-700 hover:text-white"
-              >
-                Edit
-              </button>
-            </div>
           </div>
         )}
       </div>
       
       <div className='flex flex-col gap-4 mt-4 lg:pl-8 sm:px-0 lg:mx-24 md:mx-4 sm:mx-8 mb-4'>
-        <h2 className="font-semibold justify-center flex lg:text-3xl lg:justify-start sm:text-2xl">Select Your Room</h2>
+        <h2 className="font-semibold justify-center flex lg:text-2xl lg:justify-start sm:text-xl">Select Your Room</h2>
         {loading ? (
             <div className="text-center p-10">Loading room rates...</div>
         ) : error ? (
@@ -301,8 +340,10 @@ function AllRooms() {
               onAddToCart={handleAddToCart}
             />
           ))
+        ) : hasRoomsButNoRates ? ( 
+          <p className="text-center text-gray-500">Rooms are available, but rates have not been set for this date. Please select another day.</p>
         ) : (
-          <p className="text-center text-gray-500">No rooms available for the selected dates.</p>
+          <p className="text-center text-gray-500">No rooms of any kind were found for the selected dates. Please try another day.</p>
         )}
       </div>
 
@@ -330,3 +371,4 @@ function AllRooms() {
 }
 
 export default AllRooms;
+
