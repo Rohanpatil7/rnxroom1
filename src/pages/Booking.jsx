@@ -7,6 +7,7 @@ import Guestcounter from '../components/Gueatcounter';
 import Guestinfo from '../components/Guestinfo';
 import BillingContact from '../components/BillingContact';
 import { getTaxes } from '../api/api_services';
+import initiateEasebuzzPayment from '../utils/easebuzz'; // Import the Easebuzz utility
 
 const BOOKING_DETAILS_KEY = 'currentBookingDetails';
 
@@ -46,21 +47,14 @@ function Booking({ hotelData }) {
     }
   }, [location.state]);
 
-  // --- MODIFIED SECTION ---
   const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraChildCost }) => {
     setBookingData(prev => {
-      // Create a new, updated details object with the extra costs
       const updatedDetails = {
         ...prev.details,
         extraAdultCost,
         extraChildCost,
       };
-
-      // ✅ FIX: Save the complete, updated details back to session storage
-      // This ensures the costs persist and the UI stays in sync.
       sessionStorage.setItem(BOOKING_DETAILS_KEY, JSON.stringify(updatedDetails));
-
-      // Return the new state for the component
       return {
         ...prev,
         details: updatedDetails,
@@ -70,7 +64,6 @@ function Booking({ hotelData }) {
     });
     setStep('guest-details');
   };
-  // --- END OF MODIFIED SECTION ---
 
   useEffect(() => {
     const fetchTaxes = async () => {
@@ -96,36 +89,62 @@ function Booking({ hotelData }) {
     setGuestInformation(info);
   }, []);
 
-  const handleBookingSubmit = (billingDetails) => {
+  // --- MODIFIED FUNCTION: Handles the final booking and payment initiation ---
+  const handleBookingSubmit = async (billingDetails) => {
     if (!bookingData.details || !guestInformation || !billingDetails) {
       alert("Please ensure all booking information is complete.");
       return;
     }
 
+    // --- 1. Calculate the final amount ---
     const { totalPrice, extraAdultCost = 0, extraChildCost = 0 } = bookingData.details;
     const taxableAmount = totalPrice + extraAdultCost + extraChildCost;
-    const serviceFee = 299;
-    const totalGstAmount = taxData?.taxes?.reduce((sum, tax) => sum + (taxableAmount * (parseFloat(tax.Percentage) / 100)), 0) || 0;
+    const serviceFee = 299; // Default service fee
+    const totalGstAmount = taxData?.taxes?.reduce((sum, tax) => sum + (taxableAmount * (parseFloat(tax.Percentage) / 100)), 0) || (taxableAmount * 0.18); // Default to 18%
     const grandTotal = taxableAmount + totalGstAmount + serviceFee;
 
-    const finalBookingPayload = {
-      stayDetails: bookingData.details,
-      guestCounts: bookingData.guestCounts,
-      guestDetails: guestInformation.guestDetails,
-      specialRequests: guestInformation.specialRequests,
-      billingContact: billingDetails,
-      costSummary: {
-        totalRoomCost: totalPrice,
-        extraAdultCost,
-        extraChildCost,
-        gstAmount: totalGstAmount,
-        serviceFee,
-        grandTotal,
-      },
+    // --- 2. Prepare data to send to the backend ---
+    const paymentData = {
+        amount: grandTotal,
+        firstname: billingDetails.fullName,
+        email: billingDetails.email,
+        phone: billingDetails.phone,
+        productinfo: "Hotel Room Booking", // You can make this more descriptive
     };
 
-    console.log("FINAL BOOKING PAYLOAD TO BE SENT TO PAYMENT:", finalBookingPayload);
-    alert("Booking data has been compiled and logged to the console. Ready for payment processing!");
+    try {
+        // --- 3. Call your backend to get the access_key ---
+        const response = await fetch('http://localhost:5000/initiate-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(paymentData),
+        });
+
+        const data = await response.json();
+
+        if (data.access_key) {
+            // --- 4. Initiate the payment with the received access_key ---
+            initiateEasebuzzPayment(data.access_key, (paymentResponse) => {
+                // --- 5. Handle the payment response from Easebuzz ---
+                console.log("Easebuzz Response:", paymentResponse);
+                if (paymentResponse.status === "success") {
+                    // Handle a successful payment
+                    alert("Payment Successful!");
+                    // Here you would typically save the final booking to your database
+                    // and navigate to a success page.
+                } else {
+                    // Handle a failed or cancelled payment
+                    alert("Payment Failed or Cancelled.");
+                }
+            });
+        } else {
+            alert("Error initiating payment. Please try again.");
+            console.error("API Error:", data.error);
+        }
+    } catch (error) {
+        console.error("Failed to connect to the payment server:", error);
+        alert("Could not connect to the payment server. Please check your connection and try again.");
+    }
   };
 
   const guestInfoData = useMemo(() => {
