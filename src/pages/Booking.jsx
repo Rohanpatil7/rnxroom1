@@ -1,18 +1,18 @@
-// src/pages/Booking.jsx
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Costcard from '../components/Costcard';
 import Guestcounter from '../components/Gueatcounter';
 import Guestinfo from '../components/Guestinfo';
 import BillingContact from '../components/BillingContact';
-import { getTaxes } from '../api/api_services';
-import initiateEasebuzzPayment from '../utils/easebuzz'; // Import the Easebuzz utility
+import { getTaxes, initiatePayment } from '../api/api_services';
+import initiateEasebuzzPayment from '../utils/easebuzz';
 
 const BOOKING_DETAILS_KEY = 'currentBookingDetails';
 
 function Booking({ hotelData }) {
+  const navigate = useNavigate();
   const location = useLocation();
+  
   const [step, setStep] = useState('guest-count');
   const [bookingData, setBookingData] = useState({
     details: null,
@@ -22,46 +22,77 @@ function Booking({ hotelData }) {
   
   const [guestInformation, setGuestInformation] = useState(null);
   const [taxData, setTaxData] = useState(null);
+  
+  // --- State for extra adult and child costs ---
+  const [extraAdultCost, setExtraAdultCost] = useState(0);
+  const [extraChildCost, setExtraChildCost] = useState(0);
 
-  useEffect(() => {
+  // FIXED useEffect for Booking.jsx initialization
+// Replace the first useEffect in your Booking.jsx with this:
+
+useEffect(() => {
+    console.log('🎬 === BOOKING: Initializing ===');
     const initialDetails = location.state?.bookingDetails || JSON.parse(sessionStorage.getItem(BOOKING_DETAILS_KEY));
+    
+    console.log('📦 Initial Details:', initialDetails);
+    
     if (initialDetails) {
         const initialCounts = {};
         const initialAges = {};
+        
         if (initialDetails.rooms) {
-            initialDetails.rooms.forEach(room => {
+            console.log('🏨 Processing rooms for guest counts...');
+            
+            initialDetails.rooms.forEach((room, roomIndex) => {
+                console.log(`\n  Room ${roomIndex}:`, room);
+                console.log(`    RoomId: ${room.roomId}`);
+                console.log(`    Quantity: ${room.quantity}`);
+                console.log(`    Selected Meal Plan:`, room.selectedMealPlan);
+                console.log(`    Rates:`, room.selectedMealPlan?.Rates);
+                
                 for (let i = 0; i < room.quantity; i++) {
-                    const instanceId = `${room.roomId}_${i}`;
+                    // ✅ CRITICAL: Use THREE-PART key format consistently
+                    const instanceId = `${room.roomId}_${roomIndex}_${i}`;
+                    console.log(`    Creating instance: ${instanceId}`);
+                    
                     initialCounts[instanceId] = { adults: 1, children: 0 };
                     initialAges[instanceId] = [];
                 }
             });
         }
+        
+        console.log('👥 Initial Guest Counts:', initialCounts);
+        console.log('🧒 Initial Children Ages:', initialAges);
+        
         setBookingData({
             details: initialDetails,
             guestCounts: initialCounts,
             childrenAges: initialAges,
         });
-    } else {
-        console.error("No booking details found.");
-    }
-  }, [location.state]);
 
+        if (initialDetails.extraAdultCost) {
+            setExtraAdultCost(initialDetails.extraAdultCost);
+        }
+        if (initialDetails.extraChildCost) {
+            setExtraChildCost(initialDetails.extraChildCost);
+        }
+        
+        console.log('✅ Booking data initialized');
+    } else {
+        console.error("❌ No booking details found.");
+    }
+    console.log('🎬 === END BOOKING INIT ===\n');
+}, [location.state]);
+
+  // --- Updated confirmation handler ---
   const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraChildCost }) => {
-    setBookingData(prev => {
-      const updatedDetails = {
-        ...prev.details,
-        extraAdultCost,
-        extraChildCost,
-      };
-      sessionStorage.setItem(BOOKING_DETAILS_KEY, JSON.stringify(updatedDetails));
-      return {
-        ...prev,
-        details: updatedDetails,
-        guestCounts,
-        childrenAges,
-      };
-    });
+    setBookingData(prev => ({
+      ...prev,
+      guestCounts,
+      childrenAges,
+    }));
+    setExtraAdultCost(extraAdultCost);
+    setExtraChildCost(extraChildCost);
     setStep('guest-details');
   };
 
@@ -75,8 +106,6 @@ function Booking({ hotelData }) {
             taxes: taxes,
             totalGstPercentage: taxes.reduce((sum, tax) => sum + parseFloat(tax.Percentage), 0),
           });
-        } else {
-          console.warn("Tax data not found in the expected format.", data);
         }
       } catch (error) {
         console.error("Failed to fetch tax data:", error);
@@ -89,61 +118,55 @@ function Booking({ hotelData }) {
     setGuestInformation(info);
   }, []);
 
-  // --- MODIFIED FUNCTION: Handles the final booking and payment initiation ---
+  // --- Payment response handler ---
+  const handlePaymentResponse = (response) => {
+    console.log("Easebuzz Response:", response);
+    if (response.status === "success") {
+      console.log("✅ Payment Successful!");
+      navigate('/paymentsuccess');
+    } else {
+      console.log("❌ Payment Failed or Cancelled.");
+      navigate('/paymentfailure');
+    }
+  };
+  
   const handleBookingSubmit = async (billingDetails) => {
     if (!bookingData.details || !guestInformation || !billingDetails) {
       alert("Please ensure all booking information is complete.");
       return;
     }
 
-    // --- 1. Calculate the final amount ---
-    const { totalPrice, extraAdultCost = 0, extraChildCost = 0 } = bookingData.details;
+    const { totalPrice } = bookingData.details;
     const taxableAmount = totalPrice + extraAdultCost + extraChildCost;
-    const serviceFee = 299; // Default service fee
-    const totalGstAmount = taxData?.taxes?.reduce((sum, tax) => sum + (taxableAmount * (parseFloat(tax.Percentage) / 100)), 0) || (taxableAmount * 0.18); // Default to 18%
+    const serviceFee = 299;
+    const totalGstAmount =
+      taxData?.taxes?.reduce(
+        (sum, tax) => sum + taxableAmount * (parseFloat(tax.Percentage) / 100),
+        0
+      ) || taxableAmount * 0.18;
     const grandTotal = taxableAmount + totalGstAmount + serviceFee;
 
-    // --- 2. Prepare data to send to the backend ---
     const paymentData = {
-        amount: grandTotal,
-        firstname: billingDetails.fullName,
-        email: billingDetails.email,
-        phone: billingDetails.phone,
-        productinfo: "Hotel Room Booking", // You can make this more descriptive
+      txnid: `TXN-${Date.now()}`,
+      amount: grandTotal,
+      firstname: billingDetails.fullName,
+      email: billingDetails.email,
+      phone: billingDetails.phone,
+      productinfo: "Hotel Room Booking",
     };
 
     try {
-        // --- 3. Call your backend to get the access_key ---
-        const response = await fetch('http://localhost:5000/initiate-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(paymentData),
-        });
+      const data = await initiatePayment(paymentData, handlePaymentResponse);
 
-        const data = await response.json();
-
-        if (data.access_key) {
-            // --- 4. Initiate the payment with the received access_key ---
-            initiateEasebuzzPayment(data.access_key, (paymentResponse) => {
-                // --- 5. Handle the payment response from Easebuzz ---
-                console.log("Easebuzz Response:", paymentResponse);
-                if (paymentResponse.status === "success") {
-                    // Handle a successful payment
-                    alert("Payment Successful!");
-                    // Here you would typically save the final booking to your database
-                    // and navigate to a success page.
-                } else {
-                    // Handle a failed or cancelled payment
-                    alert("Payment Failed or Cancelled.");
-                }
-            });
-        } else {
-            alert("Error initiating payment. Please try again.");
-            console.error("API Error:", data.error);
-        }
+      if (data.status === 1 && data.data) {
+        initiateEasebuzzPayment(data.data);
+      } else {
+        alert("Error initiating payment. Please try again.");
+        console.error("API Error:", data.msg || data.error);
+      }
     } catch (error) {
-        console.error("Failed to connect to the payment server:", error);
-        alert("Could not connect to the payment server. Please check your connection and try again.");
+      console.error("Failed to connect to backend payment API:", error);
+      alert("Could not connect to the payment server. Please check your internet connection and try again.");
     }
   };
 
@@ -151,12 +174,13 @@ function Booking({ hotelData }) {
     if (step !== 'guest-details' || !bookingData.details || !bookingData.guestCounts) {
       return [];
     }
-    const roomInstanceDetails = bookingData.details.rooms.flatMap(room => 
+    const roomInstanceDetails = bookingData.details.rooms.flatMap((room, roomIndex) => 
       Array.from({ length: room.quantity }).map((_, i) => ({
-        instanceId: `${room.roomId}_${i}`,
+        instanceId: `${room.roomId}_${roomIndex}_${i}`,  // UNIQUE KEY FIX
         title: room.title
       }))
     );
+
     return roomInstanceDetails.map(({ instanceId, title }) => ({
       instanceId,
       title,
@@ -172,6 +196,13 @@ function Booking({ hotelData }) {
         </div>
     );
   }
+
+  // --- Pass the latest extra costs to Costcard ---
+  const finalBookingDetails = {
+    ...bookingData.details,
+    extraAdultCost,
+    extraChildCost,
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -212,7 +243,11 @@ function Booking({ hotelData }) {
             <div className="lg:sticky lg:top-8 mt-6 md:mt-0">
               <section aria-labelledby="cost-summary-heading">
                   <h2 id="cost-summary-heading" className="sr-only">Cost Summary</h2>
-                  <Costcard bookingDetails={bookingData.details} hotelData={hotelData} taxData={taxData} />
+                   <Costcard 
+                      bookingDetails={finalBookingDetails} 
+                      hotelData={hotelData} 
+                      taxData={taxData} 
+                   />
               </section>
             </div>
           </div>

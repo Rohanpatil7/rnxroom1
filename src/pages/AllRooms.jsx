@@ -1,28 +1,25 @@
+// src/pages/AllRooms.jsx
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Roomcard from '../components/Roomcard';
 import DatePricePicker from '../components/DatePricePicker';
 import BookingCart from '../components/BookingCart';
-// ✅ Import the centralized API service function
 import { getRoomRates } from '../api/api_services.js';
 
-// --- SESSION: Define keys for storing booking data ---
 const BOOKING_CART_KEY = 'bookingCart';
 const BOOKING_DETAILS_KEY = 'bookingDetails';
 
-// --- HELPER: Formats a Date object into 'YYYY-MM-DD' for the API ---
+// (No changes to helper functions)
 const formatDateForApi = (date) => {
   if (!date) return null;
   const d = new Date(date);
   const year = d.getFullYear();
-  // Pad month and day with a leading zero if needed
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
-
-// --- HELPER: Determines rate using an object lookup ---
 const getRateForOccupancy = (rates, adults) => {
   if (!rates) return null;
   const numAdults = adults || 1;
@@ -43,6 +40,7 @@ const getRateForOccupancy = (rates, adults) => {
 
   return occupancyMap[numAdults] ?? rates.SingleOccupancy;
 };
+
 
 function AllRooms() {
   const navigate = useNavigate();
@@ -129,15 +127,11 @@ function AllRooms() {
         const params = { BookingDate: checkInDate };
         const responseData = await getRoomRates(params);
         
-        console.log("RAW API RESPONSE:", responseData);
-
         if (responseData?.result?.[0]?.Rooms) {
           const allApiRooms = responseData.result[0].Rooms;
           
-          // ✅ FIX: This logic now correctly filters out rooms and meal plans that have no available rates.
           const availableRooms = allApiRooms
             .map(room => {
-              // First, only keep meal plans that have a valid 'Rates' object.
               const availableMealPlans = room.MealPlans?.filter(plan => plan.Rates) || [];
               return {
                 _id: String(room.RoomTypeID),
@@ -146,13 +140,17 @@ function AllRooms() {
                 images: room.RoomImages || [],
                 amenities: room.Amenities || [],
                 roomPolicies: room.roomPolicies || [],
-                mealPlans: availableMealPlans, // Use the filtered list of plans
+                mealPlans: availableMealPlans,
                 pricePerNight: availableMealPlans[0]?.Rates?.SingleOccupancy ?? 0,
+                Rates: room.MealPlans?.[0]?.Rates || null,
+                ExtraAdultRate: room.ExtraAdultRate ? parseFloat(room.ExtraAdultRate) : 0,
+                ExtraChildRate: room.ExtraChildRate ? parseFloat(room.ExtraChildRate) : 0,
+                taxInfo: room.TaxInfo || null,
+                refundable: room.Refundable === 'Yes',
                 remainingRooms: 10,
                 maxCapacity: 4,
               };
             })
-            // Second, only keep rooms that have at least one bookable meal plan left.
             .filter(room => room.mealPlans.length > 0);
 
           if (allApiRooms.length > 0 && availableRooms.length === 0) {
@@ -203,6 +201,7 @@ function AllRooms() {
       _id: `${baseRoom._id}-${mealOption.MealPlan.replace(/\s+/g, '')}`,
       title: `${baseRoom.title} (${mealOption.MealPlan})`,
       pricePerNight: pricePerNight,
+       selectedMealPlan: mealOption 
     };
   
     setCart(prevCart => {
@@ -244,19 +243,26 @@ function AllRooms() {
     return perNightTotal * totalNights;
   }, [cart, totalNights]);
 
- const handleProceedToBooking = () => {
+  // --- MODIFICATION START ---
+  const handleProceedToBooking = () => {
     const bookingDataForState = {
         rooms: cart.map(item => {
             const baseRoomId = item.room._id.split('-')[0];
             const originalRoom = rooms.find(r => r._id === baseRoomId);
 
+            const mealPlanNameMatch = item.room.title.match(/\(([^)]+)\)/);
+            const selectedMealPlanName = mealPlanNameMatch ? mealPlanNameMatch[1] : null;
+
+            const selectedMealPlan = originalRoom ? originalRoom.mealPlans.find(mp => mp.MealPlan === selectedMealPlanName) : null;
+
             return {
-                roomId: baseRoomId,
+                roomId: baseRoomId, // Use the original, non-composite room ID
+                instanceRoomId: item.room._id, // Keep the unique ID for the cart
                 title: item.room.title,
                 quantity: item.quantity,
                 pricePerNight: item.room.pricePerNight,
                 room: { maxOccupancy: item.room.maxCapacity || 4 },
-                mealPlans: originalRoom ? originalRoom.mealPlans : []
+                selectedMealPlan: selectedMealPlan 
             };
         }),
         dates: {
@@ -275,6 +281,7 @@ function AllRooms() {
       state: { bookingDetails: bookingDataForState }
     });
   };
+  // --- MODIFICATION END ---
   
   const formatDate = (date) => {
     if (!date) return 'Not selected';
@@ -371,4 +378,3 @@ function AllRooms() {
 }
 
 export default AllRooms;
-

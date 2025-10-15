@@ -11,6 +11,11 @@ import {
  */
 export async function getHotelDetails() {
   const { Url, ...payload } = HOTEL_DETAILS_CONFIG;
+
+  console.log('📡 Calling:', Url);
+  console.log('📤 Sending payload:', payload);
+  
+
   console.log('Fetching hotel details from:', Url);
   try {
     const response = await axios.post(Url, payload);
@@ -20,6 +25,30 @@ export async function getHotelDetails() {
     throw error;
   }
 }
+
+
+/**
+ * Initiates payment with backend server.
+ * @param {object} paymentData - { amount, firstname, email, phone, productinfo }
+ * @returns {Promise<object>} - Payment gateway response.
+ */
+export async function initiatePayment(paymentData) {
+  const backendURL = '/initiate-payment'; // 👈 Your backend server
+  console.log('Initiating payment via:', backendURL);
+
+  try {
+    const response = await axios.post(backendURL, paymentData, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Payment API error:', error.message);
+    throw error;
+  }
+}
+
 
 /**
  * Fetches room categories and meal-plan rates for a specific date.

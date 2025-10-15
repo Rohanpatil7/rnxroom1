@@ -1,58 +1,73 @@
 import React, { useEffect, useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useSearchParams } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import Home from './pages/Home.jsx';
 import AllRooms from './pages/AllRooms.jsx';
 import Booking from './pages/Booking.jsx';
-// This import is crucial. It uses the centralized API service.
 import { getHotelDetails } from './api/api_services.js';
+
+// Import the success and failure components
+import PaySuccess from './pages/Paysuccess.jsx';
+import PayFailure from './pages/Payfailure.jsx';
 
 function App() {
   const [hotelData, setHotelData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Set initial loading to false
   const [error, setError] = useState(null);
-  
+  const [searchParams,setSearchParams] = useSearchParams();
+
+  // This will dynamically get whatever 'parameter' is in the URL
+  const encodedParam = searchParams.get("parameter");
+
   useEffect(() => {
-    // Using an async function inside useEffect is the modern standard for fetching data.
     const fetchHotelData = async () => {
+
+      // This will cause a re-render, and the effect will run again.
+      if (!encodedParam) {
+        setSearchParams({ parameter: "QWVYSS9QVTREQjNLYzd0bjRZRTg4dz09" });
+        return; // Stop execution for this render
+      }
+
+
+     // If we have a parameter, proceed to fetch the data.
       try {
         setLoading(true);
-        // Call the centralized API function. This function should use the proxy.
-        const data = await getHotelDetails();
+        const data = await getHotelDetails(encodedParam);
 
-        // Check the response structure for data or an error message from the API.
         if (data?.result?.[0]) {
           if (data.result[0].Error) {
             setError(`API Error: ${data.result[0].Error}`);
           } else {
             setHotelData(data.result[0]);
-            setError(null); // Clear previous errors on success
+            setError(null);
           }
         } else {
-          // Handle cases where the response format is unexpected.
           setError("Received invalid data format from the hotel details API.");
         }
       } catch (err) {
-        // This catches network errors (like the CORS issue) or other exceptions.
         console.error("Failed to fetch hotel data:", err);
         setError(err.message || 'An unknown network error occurred. Please check the console.');
       } finally {
-        // Ensure loading is set to false whether the call succeeds or fails.
         setLoading(false);
       }
     };
 
     fetchHotelData();
-  }, []); // The empty dependency array [] ensures this effect runs only once when the component mounts.
+  }, [encodedParam, setSearchParams]); // Effect depends on the parameter
 
-  // Render a loading state while the API call is in progress.
+  // Show a loading message only when a fetch is in progress
   if (loading) {
     return <div className="flex items-center justify-center h-screen text-xl font-semibold">Loading Hotel Information...</div>;
   }
 
-  // Render an error message if the API call fails.
+  // If there's an error (including a missing parameter), show the error.
   if (error) {
     return <div className="flex items-center justify-center h-screen text-xl font-semibold text-red-600">Error: {error}</div>;
+  }
+
+  // If there's no data and no error (initial state), you can show a generic message.
+  if (!hotelData) {
+      return <div className="flex items-center justify-center h-screen text-xl font-semibold">Please provide a hotel parameter in the URL.</div>
   }
 
   return (
@@ -60,10 +75,13 @@ function App() {
       <Navbar hotelData={hotelData} />
       <div className='h-fit relative'>
         <Routes>
-          {/* Pass hotelData to the routes that need it. */}
           <Route path='/' element={<Home hotelData={hotelData} />} />
-          <Route path='/allrooms' element={<AllRooms />} />
+          <Route path='/allrooms' element={<AllRooms hotelData={hotelData} />} />
           <Route path='/booking/new' element={<Booking hotelData={hotelData} />} />
+          
+           {/* Add routes for payment status pages */}
+          <Route path='/paymentsuccess' element={<PaySuccess />} />
+          <Route path='/paymentfailure' element={<PayFailure />} />
         </Routes>
       </div>
     </div>
@@ -71,4 +89,3 @@ function App() {
 }
 
 export default App;
-

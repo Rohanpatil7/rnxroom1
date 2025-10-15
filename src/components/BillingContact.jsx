@@ -64,6 +64,10 @@ function BillingContact({ onSubmitBooking }) {
     if (id === 'phone') {
       processedValue = value.replace(/[^0-9]/g, '');
     }
+
+    if (id === 'zip') {
+      processedValue = value.replace(/[^0-9]/g, '');
+    }
     
     setBillingDetails(prevDetails => ({
       ...prevDetails,
@@ -210,6 +214,7 @@ function BillingContact({ onSubmitBooking }) {
             <input
               type="text"
               id="zip"
+              maxLength={6}
               value={billingDetails.zip}
               onChange={handleChange}
               className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none sm:text-sm ${errors.zip ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'}`}

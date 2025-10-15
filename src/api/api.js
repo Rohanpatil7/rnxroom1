@@ -2,8 +2,7 @@
 // Sets the base URL for all API calls.
 // It prioritizes the VITE_API_BASE environment variable,
 // but falls back to the URL from the documentation if it's not set.
-export const API_BASE =
-  import.meta.env.VITE_API_BASE ?? "https://xpresshotelpos.com/booking/api";
+export const API_BASE = import.meta.env.VITE_API_BASE ?? "https://xpresshotelpos.com/booking/api";
 
 // --- Common Credentials ---
 // Contains credentials required for every API request.
@@ -22,7 +21,7 @@ function getParameterFromUrl() {
   return (
     params.get("parameter") ||
     import.meta.env.VITE_API_PARAMETER ||
-    "QWVYSS9QVTREQjNLYzd0bjRZRTg4dz09"
+    ""
   );
 }
 
@@ -32,19 +31,19 @@ function getParameterFromUrl() {
 export const HOTEL_DETAILS_CONFIG = {
   ...COMMON_CREDENTIALS,
   Parameter: getParameterFromUrl(),
-  Url: import.meta.env.VITE_HOTEL_DETAILS_URL ?? `${API_BASE}/get_hotel_details.php`,
+  Url: import.meta.env.VITE_HOTEL_DETAILS_ENDPOINT ?? `${API_BASE}/get_hotel_details.php`,
 };
 
 // ✅ Configuration for fetching room rates
 export const ROOM_RATES_CONFIG = {
   ...COMMON_CREDENTIALS,
   Parameter: getParameterFromUrl(),
-  Url: import.meta.env.VITE_ROOM_RATES_URL ?? `${API_BASE}/get_room_rates.php`,
+  Url: import.meta.env.VITE_ROOM_RATES_ENDPOINT ?? `${API_BASE}/get_room_rates.php`,
 };
 
 // ✅ Configuration for fetching taxes
 export const TAXES_CONFIG = {
   ...COMMON_CREDENTIALS,
   Parameter: getParameterFromUrl(),
-  Url: import.meta.env.VITE_TAXES_URL ?? `${API_BASE}/get_taxes.php`,
+  Url: import.meta.env.VITE_TAXES_ENDPOINT ?? `${API_BASE}/get_taxes.php`,
 };

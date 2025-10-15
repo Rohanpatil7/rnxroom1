@@ -1,6 +1,6 @@
 // This relative path is non-negotiable. It MUST start with '/api' to trigger
 // the proxy rule defined in your vite.config.js.
-export const API_BASE = "/api";
+export const API_BASE = "/booking/api";
 
 // --- Common Credentials ---
 // These are static credentials from the API documentation.
