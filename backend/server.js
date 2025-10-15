@@ -60,8 +60,8 @@ app.post("/initiate-payment", async (req, res) => {
       email,
       phone,
       // ⚠️ These URLs must be valid HTTPS (not localhost)
-      surl: `${process.env.FRONTEND_URL}/pages/Paysuccess`, // Success redirect URL
-      furl: `${process.env.FRONTEND_URL}/pages/Payfailure`, // Failure redirect URL
+      surl: `${process.env.FRONTEND_URL}/paymentsuccess`, // Success redirect URL
+      furl: `${process.env.FRONTEND_URL}/paymentfailure`, // Failure redirect URL
       hash,
     };
 

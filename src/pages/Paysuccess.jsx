@@ -18,7 +18,7 @@ const PaySuccess = () => {
                 className="py-2 px-5 text-base text-white bg-green-500 rounded-md cursor-pointer hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
                 onClick={handleBackToHome}
             >
-                Back to Home
+                Back to Room
             </button>
         </div>
     );

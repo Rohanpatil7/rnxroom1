@@ -27,42 +27,27 @@ function Booking({ hotelData }) {
   const [extraAdultCost, setExtraAdultCost] = useState(0);
   const [extraChildCost, setExtraChildCost] = useState(0);
 
-  // FIXED useEffect for Booking.jsx initialization
-// Replace the first useEffect in your Booking.jsx with this:
+  // src/pages/Booking.jsx
 
-useEffect(() => {
-    console.log('🎬 === BOOKING: Initializing ===');
+  // ... (imports and component definition)
+
+  useEffect(() => {
     const initialDetails = location.state?.bookingDetails || JSON.parse(sessionStorage.getItem(BOOKING_DETAILS_KEY));
     
-    console.log('📦 Initial Details:', initialDetails);
-    
-    if (initialDetails) {
+    if (initialDetails && initialDetails.rooms) {
         const initialCounts = {};
         const initialAges = {};
         
-        if (initialDetails.rooms) {
-            console.log('🏨 Processing rooms for guest counts...');
-            
-            initialDetails.rooms.forEach((room, roomIndex) => {
-                console.log(`\n  Room ${roomIndex}:`, room);
-                console.log(`    RoomId: ${room.roomId}`);
-                console.log(`    Quantity: ${room.quantity}`);
-                console.log(`    Selected Meal Plan:`, room.selectedMealPlan);
-                console.log(`    Rates:`, room.selectedMealPlan?.Rates);
+        initialDetails.rooms.forEach((room, roomIndex) => {
+            // Loop through the quantity of each room type
+            for (let i = 0; i < room.quantity; i++) {
+                // ✅ CORRECTED: Create a unique three-part key for each room instance
+                const instanceId = `${room.roomId}_${roomIndex}_${i}`;
                 
-                for (let i = 0; i < room.quantity; i++) {
-                    // ✅ CRITICAL: Use THREE-PART key format consistently
-                    const instanceId = `${room.roomId}_${roomIndex}_${i}`;
-                    console.log(`    Creating instance: ${instanceId}`);
-                    
-                    initialCounts[instanceId] = { adults: 1, children: 0 };
-                    initialAges[instanceId] = [];
-                }
-            });
-        }
-        
-        console.log('👥 Initial Guest Counts:', initialCounts);
-        console.log('🧒 Initial Children Ages:', initialAges);
+                initialCounts[instanceId] = { adults: 1, children: 0 };
+                initialAges[instanceId] = [];
+            }
+        });
         
         setBookingData({
             details: initialDetails,
@@ -70,6 +55,7 @@ useEffect(() => {
             childrenAges: initialAges,
         });
 
+        // Initialize extra costs if they exist
         if (initialDetails.extraAdultCost) {
             setExtraAdultCost(initialDetails.extraAdultCost);
         }
@@ -77,13 +63,14 @@ useEffect(() => {
             setExtraChildCost(initialDetails.extraChildCost);
         }
         
-        console.log('✅ Booking data initialized');
     } else {
-        console.error("❌ No booking details found.");
+        console.error("No booking details found on initialization.");
+        // Optional: Redirect if no data is available
+        // navigate('/allrooms');
     }
-    console.log('🎬 === END BOOKING INIT ===\n');
-}, [location.state]);
+  }, [location.state, navigate]);
 
+  // ... (rest of the component)
   // --- Updated confirmation handler ---
   const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraChildCost }) => {
     setBookingData(prev => ({
@@ -156,10 +143,10 @@ useEffect(() => {
     };
 
     try {
-      const data = await initiatePayment(paymentData, handlePaymentResponse);
+      const data = await initiatePayment(paymentData);
 
       if (data.status === 1 && data.data) {
-        initiateEasebuzzPayment(data.data);
+        initiateEasebuzzPayment(data.data,handlePaymentResponse);
       } else {
         alert("Error initiating payment. Please try again.");
         console.error("API Error:", data.msg || data.error);

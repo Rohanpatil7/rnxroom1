@@ -261,7 +261,10 @@ function AllRooms() {
                 title: item.room.title,
                 quantity: item.quantity,
                 pricePerNight: item.room.pricePerNight,
-                room: { maxOccupancy: item.room.maxCapacity || 4 },
+                room: { maxOccupancy: item.room.maxCapacity || 4,
+                        ExtraAdultRate: originalRoom ? originalRoom.ExtraAdultRate : 0,
+                        ExtraChildRate: originalRoom ? originalRoom.ExtraChildRate : 0,
+                 },
                 selectedMealPlan: selectedMealPlan 
             };
         }),

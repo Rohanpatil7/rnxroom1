@@ -1,6 +1,6 @@
-// src/components/Guestcounter.jsx - WITH DETAILED DEBUGGING
+// src/components/Gueatcounter.jsx
 
-import React, { useState } from 'react';
+import React, { useState, } from 'react';
 
 const CHILD_AGE_LIMIT = 12;
 const BASE_ADULT_OCCUPANCY = 2;
@@ -82,12 +82,6 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
   };
 
   const handleConfirmGuests = () => {
-    console.log('🔍 === GUESTCOUNTER DEBUG START ===');
-    console.log('📦 Rooms Data:', rooms);
-    console.log('📅 Dates Data:', dates);
-    console.log('👥 Guest Counts:', guestCounts);
-    console.log('🧒 Children Ages:', childrenAges);
-
     const newErrors = {};
     let formIsValid = true;
 
@@ -101,7 +95,6 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
 
     setFormErrors(newErrors);
     if (!formIsValid) {
-      console.warn('🚫 Guest form validation failed.', newErrors);
       return;
     }
 
@@ -109,92 +102,60 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
     let totalExtraChildCost = 0;
     const nights = dates?.nights || 0;
 
-    console.log(`🌙 Nights: ${nights}`);
-
     if (rooms && nights > 0) {
       Object.entries(guestCounts).forEach(([instanceId, counts]) => {
-        console.log(`\n🔑 Processing instanceId: ${instanceId}`);
-        console.log(`👤 Counts for this instance:`, counts);
-
-        // Extract roomId from instanceId
-        const roomIdPrefix = instanceId.split('_')[0];
-        console.log(`🔍 Looking for roomId: ${roomIdPrefix}`);
-        
-        // Find the room
-        const roomData = rooms.find(r => String(r.roomId) === roomIdPrefix);
-        console.log(`🏠 Found Room Data:`, roomData);
+        // --- THIS IS THE FIX ---
+        // We use the `roomIndex` from the instanceId to get the correct room from the `rooms` array.
+        const [, roomIndexStr] = instanceId.split('_');
+        const roomIndex = parseInt(roomIndexStr, 10);
+        const roomData = rooms[roomIndex];
+        // --- END OF FIX ---
 
         if (!roomData) {
           console.warn(`⚠️ No room data found for instanceId: ${instanceId}`);
           return;
         }
 
-        // Extract rates
         let rates = null;
-        console.log(`📋 Checking for selectedMealPlan:`, roomData.selectedMealPlan);
-
         if (roomData.selectedMealPlan?.Rates) {
           rates = roomData.selectedMealPlan.Rates;
-          console.log(`✅ Using rates from selectedMealPlan:`, rates);
         } else if (roomData.room) {
           rates = {
             ExtraAdultRate: parseFloat(roomData.room.ExtraAdultRate || 0),
             ExtraChildRate: parseFloat(roomData.room.ExtraChildRate || 0),
           };
-          console.log(`⚠️ Using fallback rates from room:`, rates);
         }
 
-        if (!rates || (!rates.ExtraAdultRate && !rates.ExtraChildRate)) {
-          console.warn(`❌ No valid rate data found for roomId: ${roomData.roomId}`, roomData);
-          return;
+        if (!rates) {
+            console.warn(`❌ No valid rate data found for roomId: ${roomData.roomId}`, roomData);
+            return;
         }
 
         const childrenAgesForRoom = childrenAges[instanceId] || [];
 
-        // Extra adult calculation
         if (counts.adults > BASE_ADULT_OCCUPANCY && rates.ExtraAdultRate > 0) {
           const extraAdults = counts.adults - BASE_ADULT_OCCUPANCY;
-          const costForThisRoom = extraAdults * rates.ExtraAdultRate * nights;
-          totalExtraAdultCost += costForThisRoom;
-          console.log(`💵 Extra Adults: ${extraAdults} x ₹${rates.ExtraAdultRate} x ${nights} nights = ₹${costForThisRoom}`);
-        } else {
-          console.log(`ℹ️ No extra adult charges (adults: ${counts.adults}, rate: ${rates.ExtraAdultRate})`);
+          totalExtraAdultCost += extraAdults * rates.ExtraAdultRate * nights;
         }
 
-        // Extra child calculation
         if (rates.ExtraChildRate > 0) {
-          childrenAgesForRoom.forEach((age, idx) => {
+          childrenAgesForRoom.forEach(age => {
             const parsedAge = parseInt(age);
             if (parsedAge > CHILD_AGE_LIMIT) {
-              const costForThisChild = rates.ExtraChildRate * nights;
-              totalExtraChildCost += costForThisChild;
-              console.log(`👶 Child ${idx + 1} (age ${parsedAge}) x ₹${rates.ExtraChildRate} x ${nights} nights = ₹${costForThisChild}`);
-            } else {
-              console.log(`👶 Child ${idx + 1} (age ${parsedAge}) - FREE (under ${CHILD_AGE_LIMIT})`);
+              totalExtraChildCost += rates.ExtraChildRate * nights;
             }
           });
-        } else {
-          console.log(`ℹ️ No child charges (rate: ${rates.ExtraChildRate})`);
         }
       });
-    } else {
-      console.warn('⚠️ No rooms or nights = 0, skipping cost calculation');
     }
 
-    console.log('\n💰 === FINAL TOTALS ===');
-    console.log(`Extra Adult Cost: ₹${totalExtraAdultCost}`);
-    console.log(`Extra Child Cost: ₹${totalExtraChildCost}`);
-    console.log('🔍 === GUESTCOUNTER DEBUG END ===\n');
-
     if (onConfirm) {
-      const dataToPass = {
+      onConfirm({
         guestCounts,
         childrenAges,
         extraAdultCost: totalExtraAdultCost,
         extraChildCost: totalExtraChildCost,
-      };
-      console.log('📤 Passing to parent:', dataToPass);
-      onConfirm(dataToPass);
+      });
     }
   };
 
@@ -214,6 +175,7 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
       instanceNum: i + 1,
     }))
   );
+
 
   return (
     <div className="w-full max-w-3xl mx-auto p-4 font-sans">
