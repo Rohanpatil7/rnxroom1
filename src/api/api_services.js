@@ -25,15 +25,16 @@ export async function getHotelDetails() {
  * @returns {Promise<object>} - Payment gateway response.
  */
 export async function initiatePayment(paymentData) {
-  // ✅ MODIFIED: Consistent path for both dev and prod
-  const paymentPath = '/booking/initiate-payment';
+  // ✅ CORRECTED: This path should match the server route
+  const paymentPath = '/initiate-payment';
 
-  // ✅ MODIFIED: Use an environment variable for the production backend URL
+  // This logic is now correct, but the error indicates the deployed
+  // version might have an older, incorrect version of this file.
   const backendURL = import.meta.env.DEV
-    ? paymentPath // Uses the proxy in development
-    : (import.meta.env.VITE_BACKEND_URL || '') + paymentPath; // Uses your deployed backend URL in production
+    ? paymentPath // Uses Vite proxy in development
+    : (import.meta.env.VITE_BACKEND_URL || '') + paymentPath;
 
-  console.log('Initiating payment via:', backendURL);
+  console.log('Initiating payment via:', backendURL); // This will now log the correct URL
 
   try {
     const response = await axios.post(backendURL, paymentData, {

@@ -16,8 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 // ---- Serve React Build Files ----
-// This serves your frontend's 'dist' folder from the '/booking' path
-app.use("/booking", express.static(path.join(__dirname, "../dist")));
+app.use(express.static(path.join(__dirname, "dist")));
 
 
 // =============================
@@ -29,14 +28,14 @@ const SALT = process.env.EASEBUZZ_SALT;   // <-- Your Easebuzz Production Salt
 
 // =============================
 // 🌐 Production API endpoint
+// Use https://testpay.easebuzz.in/payment/initiateLink for TEST mode
 // =============================
 const EASEBUZZ_API = "https://pay.easebuzz.in/payment/initiateLink";
 
 // =============================
 // Initiate Payment Route
 // =============================
-// ✅ MODIFIED: The route is now prefixed with /booking
-app.post("/booking/initiate-payment", async (req, res) => {
+app.post("/initiate-payment", async (req, res) => {
   try {
     const { txnid, amount, firstname, email, phone, productinfo } = req.body;
 
@@ -44,10 +43,14 @@ app.post("/booking/initiate-payment", async (req, res) => {
       return res.status(400).json({ status: 0, msg: "Missing required parameters" });
     }
 
+    // Step 1️⃣ Format amount with 2 decimals
     const formattedAmount = parseFloat(amount).toFixed(2);
+
+    // Step 2️⃣ Build hash string EXACTLY per Easebuzz documentation
     const hashString = `${KEY}|${txnid}|${formattedAmount}|${productinfo}|${firstname}|${email}|||||||||||${SALT}`;
     const hash = crypto.createHash("sha512").update(hashString).digest("hex");
 
+    // Step 3️⃣ Prepare payload for Easebuzz API
     const payload = {
       key: KEY,
       txnid,
@@ -56,26 +59,37 @@ app.post("/booking/initiate-payment", async (req, res) => {
       firstname,
       email,
       phone,
-      // ⚠️ IMPORTANT: Update FRONTEND_URL in your .env for production
-      surl: `${process.env.FRONTEND_URL}/paymentsuccess`, 
-      furl: `${process.env.FRONTEND_URL}/paymentfailure`,
+      // ⚠️ These URLs must be valid HTTPS (not localhost)
+      surl: `${process.env.FRONTEND_URL}/paymentsuccess`, // Success redirect URL
+      furl: `${process.env.FRONTEND_URL}/paymentfailure`, // Failure redirect URL
       hash,
     };
-    
-    console.log("Payload being sent to Easebuzz:", payload);
 
+    // =============================
+    // 🪵 Log debug data for Easebuzz support
+    // =============================
+    console.log("\n=== EASEBUZZ DEBUG PAYLOAD ===");
+    console.log("POST URL:", EASEBUZZ_API);
+    console.log("Payload being sent:", payload);
+    console.log("Hash String:", hashString);
+    console.log("Generated Hash:", hash);
+    console.log("==============================\n");
+
+    // Step 4️⃣ Send request to Easebuzz API
     const response = await axios.post(EASEBUZZ_API, qs.stringify(payload), {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
     });
 
     console.log("Easebuzz API Response:", response.data);
 
+    // Step 5️⃣ Return access_key to frontend
     if (response.data && response.data.status === 1 && response.data.data) {
       res.json({
         status: 1,
-        data: response.data.data,
+        data: response.data.data, // this is the access_key
       });
     } else {
+      console.error("Easebuzz returned invalid response:", response.data);
       res.status(400).json({
         status: 0,
         msg: "Easebuzz returned invalid response",
@@ -94,16 +108,9 @@ app.post("/booking/initiate-payment", async (req, res) => {
 
 
 // ---- React Router Fallback ----
-// This now correctly serves your app for any sub-route of /booking
-app.get("/booking/*", (req, res) => {
-  res.sendFile(path.resolve(__dirname, "../dist", "index.html"));
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.resolve(__dirname, "dist", "index.html"));
 });
-
-// Add a root redirect for convenience
-app.get("/", (req, res) => {
-    res.redirect('/booking');
-});
-
 
 // ---- Start Server ----
 const PORT = process.env.PORT || 5000;
