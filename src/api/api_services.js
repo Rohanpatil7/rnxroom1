@@ -5,17 +5,9 @@ import {
   TAXES_CONFIG
 } from './api_config';
 
-/**
- * Fetches detailed information for a hotel.
- * @returns {Promise<object>} A promise that resolves to the API response data.
- */
+// ... (getHotelDetails function remains the same) ...
 export async function getHotelDetails() {
   const { Url, ...payload } = HOTEL_DETAILS_CONFIG;
-
-  console.log('📡 Calling:', Url);
-  console.log('📤 Sending payload:', payload);
-  
-
   console.log('Fetching hotel details from:', Url);
   try {
     const response = await axios.post(Url, payload);
@@ -33,13 +25,13 @@ export async function getHotelDetails() {
  * @returns {Promise<object>} - Payment gateway response.
  */
 export async function initiatePayment(paymentData) {
-  // --- FIX: Dynamically set the backend URL based on the environment ---
-  const isDev = import.meta.env.DEV;
-  
-  // In development, it uses the proxy. In production, it uses your live Render URL.
-  const backendURL = isDev
-    ? '/initiate-payment'
-    : 'https://xpresshotelpos.com/initiate-payment'; // ⚠️ IMPORTANT: Replace this with your actual Render URL if it's different.
+  // ✅ MODIFIED: Consistent path for both dev and prod
+  const paymentPath = '/booking/initiate-payment';
+
+  // ✅ MODIFIED: Use an environment variable for the production backend URL
+  const backendURL = import.meta.env.DEV
+    ? paymentPath // Uses the proxy in development
+    : (import.meta.env.VITE_BACKEND_URL || '') + paymentPath; // Uses your deployed backend URL in production
 
   console.log('Initiating payment via:', backendURL);
 
@@ -56,22 +48,10 @@ export async function initiatePayment(paymentData) {
   }
 }
 
-
-/**
- * Fetches room categories and meal-plan rates for a specific date.
- * @param {object} [params] - The parameters for the request.
- * @param {string} [params.BookingDate] - The date to fetch rates for (YYYY-MM-DD).
- * @returns {Promise<object>} A promise that resolves to the API response data.
- */
+// ... (getRoomRates and getTaxes functions remain the same) ...
 export async function getRoomRates(params = {}) {
   const { Url, ...basePayload } = ROOM_RATES_CONFIG;
-  
-  // Combine the base credentials with any dynamic parameters like BookingDate
-  const payload = {
-    ...basePayload,
-    ...params,
-  };
-
+  const payload = { ...basePayload, ...params };
   console.log(`Fetching room rates from: ${Url} for date: ${payload.BookingDate}`);
   try {
     const response = await axios.post(Url, payload);
@@ -82,11 +62,6 @@ export async function getRoomRates(params = {}) {
   }
 }
 
-
-/**
- * Fetches all active tax groups for a hotel.
- * @returns {Promise<object>} A promise that resolves to the API response data.
- */
 export async function getTaxes() {
   const { Url, ...payload } = TAXES_CONFIG;
   console.log('Fetching taxes from:', Url);
