@@ -24,9 +24,15 @@ const formatCurrency = (amount) => {
 function Costcard({ bookingDetails, hotelData, taxData }) {
   if (!bookingDetails) return null;
 
-  const { rooms = [], dates = {}, totalPrice = 0, extraAdultCost = 0, extraChildCost = 0 } = bookingDetails;
-  const { checkIn, checkOut, nights = 0 } = dates;
+  const {
+    rooms = [],
+    dates = {},
+    totalPrice = 0,
+    extraAdultCost = 0,
+    extraChildCost = 0
+  } = bookingDetails;
 
+  const { checkIn, checkOut, nights = 0 } = dates;
   const totalRooms = rooms.reduce((sum, item) => sum + item.quantity, 0);
 
   const serviceFee = 299;
@@ -47,22 +53,16 @@ function Costcard({ bookingDetails, hotelData, taxData }) {
   return (
     <div className="max-w-sm rounded-xl bg-white font-sans shadow-lg overflow-hidden">
       {/* Hotel Image */}
-      <img
-        className="w-full h-48 object-cover"
-        src={hotelImage}
-        alt="Hotel"
-      />
+      <img className="w-full h-48 object-cover" src={hotelImage} alt="Hotel" />
 
       <div className="p-4">
-        {/* Header */}
         <div>
           <h2 className="text-xl font-bold text-gray-800">Your Stay Summary</h2>
           <p className="text-sm text-gray-500">
-            {totalRooms} Room{totalRooms !== 1 ? 's' : ''} Selected
+            {totalRooms} Room{totalRooms !== 1 ? 's' : ''}
           </p>
           <p className="mt-3 text-sm font-medium text-gray-800">
-            {formatDate(checkIn)} ----- {nights > 0 ? nights : '0'} Night
-            {nights !== 1 ? 's' : ''} ----- {formatDate(checkOut)}
+            {formatDate(checkIn)} ----- {nights} Night{nights !== 1 ? 's' : ''} ----- {formatDate(checkOut)}
           </p>
 
           <NavLink
@@ -80,7 +80,7 @@ function Costcard({ bookingDetails, hotelData, taxData }) {
           <div className="space-y-2">
             {rooms.map((item, index) => (
               <div
-                key={`room_${item.roomId}_${index}`} // Ensuring unique key using roomId and index
+                key={`room_${item.roomId}_${index}`}
                 className="flex items-center justify-between text-sm"
               >
                 <p className="text-indigo-600 pr-2">
@@ -103,42 +103,35 @@ function Costcard({ bookingDetails, hotelData, taxData }) {
                 {formatCurrency(totalPrice)}
               </p>
             </div>
-
+            
             {extraAdultCost > 0 && (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">Extra Adult Cost</p>
-                <p className="font-medium text-gray-800">
-                  {formatCurrency(extraAdultCost)}
-                </p>
-              </div>
+                <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-600">Extra Adult Cost</p>
+                    <p className="font-medium text-gray-800">{formatCurrency(extraAdultCost)}</p>
+                </div>
             )}
 
-            {extraChildCost > 0 && (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">Paid Child Cost</p>
-                <p className="font-medium text-gray-800">
-                  {formatCurrency(extraChildCost)}
-                </p>
-              </div>
-            )}
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">Extra Child Cost</p>
+              <p className="font-medium text-gray-800">
+                {formatCurrency(extraChildCost)}
+              </p>
+            </div>
 
             {/* Taxes */}
-            {taxData?.taxes?.map((tax, i) => {
-              const taxKey = `${tax.TaxGroupID || tax.TaxGroupName || `fallback_${i}`}_${i}`; // Unique key fallback
-              return (
-                <div
-                  key={taxKey}
-                  className="flex items-center justify-between"
-                >
-                  <p className="text-sm text-gray-600">
-                    {tax.TaxGroupName} ({parseFloat(tax.Percentage)}%)
-                  </p>
-                  <p className="font-medium text-gray-800">
-                    {formatCurrency(taxableAmount * (parseFloat(tax.Percentage) / 100))}
-                  </p>
-                </div>
-              );
-            })}
+            {taxData?.taxes?.map((tax, i) => (
+              <div
+                key={`${tax.TaxGroupID || tax.TaxGroupName}_${i}`}
+                className="flex items-center justify-between"
+              >
+                <p className="text-sm text-gray-600">
+                  {tax.TaxGroupName} ({parseFloat(tax.Percentage)}%)
+                </p>
+                <p className="font-medium text-gray-800">
+                  {formatCurrency(taxableAmount * (parseFloat(tax.Percentage) / 100))}
+                </p>
+              </div>
+            ))}
 
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-600">Service Fee</p>

@@ -76,7 +76,7 @@ function App() {
       <div className='h-fit relative'>
         <Routes>
           <Route path='/' element={<Home hotelData={hotelData} />} />
-          <Route path='/allrooms' element={<AllRooms hotelData={hotelData} />} />
+          <Route path='/allrooms' element={<AllRooms hotelData={hotelData} room />} />
           <Route path='/booking/new' element={<Booking hotelData={hotelData} />} />
           
            {/* Add routes for payment status pages */}

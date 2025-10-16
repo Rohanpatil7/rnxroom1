@@ -33,7 +33,14 @@ export async function getHotelDetails() {
  * @returns {Promise<object>} - Payment gateway response.
  */
 export async function initiatePayment(paymentData) {
-  const backendURL = '/initiate-payment'; // 👈 Your backend server
+  // --- FIX: Dynamically set the backend URL based on the environment ---
+  const isDev = import.meta.env.DEV;
+  
+  // In development, it uses the proxy. In production, it uses your live Render URL.
+  const backendURL = isDev
+    ? '/initiate-payment'
+    : 'https://xpresshotelpos.com/initiate-payment'; // ⚠️ IMPORTANT: Replace this with your actual Render URL if it's different.
+
   console.log('Initiating payment via:', backendURL);
 
   try {
@@ -91,4 +98,3 @@ export async function getTaxes() {
     throw error;
   }
 }
-

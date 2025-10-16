@@ -1,3 +1,5 @@
+// src/pages/Booking.jsx
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Costcard from '../components/Costcard';
@@ -22,26 +24,31 @@ function Booking({ hotelData }) {
   
   const [guestInformation, setGuestInformation] = useState(null);
   const [taxData, setTaxData] = useState(null);
-  
-  // --- State for extra adult and child costs ---
-  const [extraAdultCost, setExtraAdultCost] = useState(0);
-  const [extraChildCost, setExtraChildCost] = useState(0);
-
-  // src/pages/Booking.jsx
-
-  // ... (imports and component definition)
 
   useEffect(() => {
-    const initialDetails = location.state?.bookingDetails || JSON.parse(sessionStorage.getItem(BOOKING_DETAILS_KEY));
-    
+    // --- MODIFICATION START ---
+    // 1. Prioritize data from navigation state.
+    let initialDetails = location.state?.bookingDetails;
+
+    // 2. If navigation state is missing (e.g., on page refresh), fallback to sessionStorage.
+    if (!initialDetails) {
+      try {
+        initialDetails = JSON.parse(sessionStorage.getItem(BOOKING_DETAILS_KEY));
+      } catch (e) {
+        console.error("Could not parse booking details from session storage", e);
+      }
+    }
+
+    // 3. If we have details, SAVE THE CORRECT VERSION to sessionStorage and update state.
     if (initialDetails && initialDetails.rooms) {
+        // This is the crucial step: overwrite session storage with the full data.
+        sessionStorage.setItem(BOOKING_DETAILS_KEY, JSON.stringify(initialDetails));
+        
         const initialCounts = {};
         const initialAges = {};
         
         initialDetails.rooms.forEach((room, roomIndex) => {
-            // Loop through the quantity of each room type
             for (let i = 0; i < room.quantity; i++) {
-                // ✅ CORRECTED: Create a unique three-part key for each room instance
                 const instanceId = `${room.roomId}_${roomIndex}_${i}`;
                 
                 initialCounts[instanceId] = { adults: 1, children: 0 };
@@ -50,36 +57,34 @@ function Booking({ hotelData }) {
         });
         
         setBookingData({
-            details: initialDetails,
+            details: {
+              ...initialDetails,
+              extraAdultCost: initialDetails.extraAdultCost || 0,
+              extraChildCost: initialDetails.extraChildCost || 0,
+            },
             guestCounts: initialCounts,
             childrenAges: initialAges,
         });
-
-        // Initialize extra costs if they exist
-        if (initialDetails.extraAdultCost) {
-            setExtraAdultCost(initialDetails.extraAdultCost);
-        }
-        if (initialDetails.extraChildCost) {
-            setExtraChildCost(initialDetails.extraChildCost);
-        }
         
     } else {
         console.error("No booking details found on initialization.");
-        // Optional: Redirect if no data is available
-        // navigate('/allrooms');
+        // Redirect if no data is available
+        navigate('/allrooms');
     }
+     // --- MODIFICATION END ---
   }, [location.state, navigate]);
 
-  // ... (rest of the component)
-  // --- Updated confirmation handler ---
   const handleGuestConfirm = ({ guestCounts, childrenAges, extraAdultCost, extraChildCost }) => {
     setBookingData(prev => ({
       ...prev,
+      details: {
+        ...prev.details,
+        extraAdultCost,
+        extraChildCost,
+      },
       guestCounts,
       childrenAges,
     }));
-    setExtraAdultCost(extraAdultCost);
-    setExtraChildCost(extraChildCost);
     setStep('guest-details');
   };
 
@@ -105,7 +110,6 @@ function Booking({ hotelData }) {
     setGuestInformation(info);
   }, []);
 
-  // --- Payment response handler ---
   const handlePaymentResponse = (response) => {
     console.log("Easebuzz Response:", response);
     if (response.status === "success") {
@@ -123,7 +127,7 @@ function Booking({ hotelData }) {
       return;
     }
 
-    const { totalPrice } = bookingData.details;
+    const { totalPrice, extraAdultCost = 0, extraChildCost = 0 } = bookingData.details;
     const taxableAmount = totalPrice + extraAdultCost + extraChildCost;
     const serviceFee = 299;
     const totalGstAmount =
@@ -146,7 +150,7 @@ function Booking({ hotelData }) {
       const data = await initiatePayment(paymentData);
 
       if (data.status === 1 && data.data) {
-        initiateEasebuzzPayment(data.data,handlePaymentResponse);
+        initiateEasebuzzPayment(data.data, handlePaymentResponse);
       } else {
         alert("Error initiating payment. Please try again.");
         console.error("API Error:", data.msg || data.error);
@@ -163,7 +167,7 @@ function Booking({ hotelData }) {
     }
     const roomInstanceDetails = bookingData.details.rooms.flatMap((room, roomIndex) => 
       Array.from({ length: room.quantity }).map((_, i) => ({
-        instanceId: `${room.roomId}_${roomIndex}_${i}`,  // UNIQUE KEY FIX
+        instanceId: `${room.roomId}_${roomIndex}_${i}`,
         title: room.title
       }))
     );
@@ -183,13 +187,6 @@ function Booking({ hotelData }) {
         </div>
     );
   }
-
-  // --- Pass the latest extra costs to Costcard ---
-  const finalBookingDetails = {
-    ...bookingData.details,
-    extraAdultCost,
-    extraChildCost,
-  };
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -231,7 +228,7 @@ function Booking({ hotelData }) {
               <section aria-labelledby="cost-summary-heading">
                   <h2 id="cost-summary-heading" className="sr-only">Cost Summary</h2>
                    <Costcard 
-                      bookingDetails={finalBookingDetails} 
+                      bookingDetails={bookingData.details} 
                       hotelData={hotelData} 
                       taxData={taxData} 
                    />

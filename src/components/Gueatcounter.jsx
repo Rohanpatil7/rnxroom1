@@ -1,6 +1,6 @@
-// src/components/Gueatcounter.jsx
+// src/components/Guestcounter.jsx - WITH CORRECTIONS
 
-import React, { useState, } from 'react';
+import React, { useState } from 'react';
 
 const CHILD_AGE_LIMIT = 12;
 const BASE_ADULT_OCCUPANCY = 2;
@@ -95,6 +95,7 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
 
     setFormErrors(newErrors);
     if (!formIsValid) {
+      console.warn('🚫 Guest form validation failed.', newErrors);
       return;
     }
 
@@ -103,11 +104,11 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
     const nights = dates?.nights || 0;
 
     if (rooms && nights > 0) {
-      Object.entries(guestCounts).forEach(([instanceId, counts]) => {
-        // --- THIS IS THE FIX ---
-        // We use the `roomIndex` from the instanceId to get the correct room from the `rooms` array.
-        const [, roomIndexStr] = instanceId.split('_');
-        const roomIndex = parseInt(roomIndexStr, 10);
+        Object.entries(guestCounts).forEach(([instanceId, counts]) => {
+
+        // --- DYNAMIC FIX ---
+        // Get the roomIndex from the instanceId (e.g., "123_1_0" -> 1)
+        const roomIndex = parseInt(instanceId.split('_')[1], 10);
         const roomData = rooms[roomIndex];
         // --- END OF FIX ---
 
@@ -119,30 +120,29 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
         let rates = null;
         if (roomData.selectedMealPlan?.Rates) {
           rates = roomData.selectedMealPlan.Rates;
-        } else if (roomData.room) {
-          rates = {
-            ExtraAdultRate: parseFloat(roomData.room.ExtraAdultRate || 0),
-            ExtraChildRate: parseFloat(roomData.room.ExtraChildRate || 0),
-          };
         }
 
         if (!rates) {
-            console.warn(`❌ No valid rate data found for roomId: ${roomData.roomId}`, roomData);
-            return;
+          console.warn(`❌ No valid rate data found for roomId: ${roomData.roomId}`, roomData);
+          return;
         }
-
+        
         const childrenAgesForRoom = childrenAges[instanceId] || [];
 
+        // Extra adult calculation
         if (counts.adults > BASE_ADULT_OCCUPANCY && rates.ExtraAdultRate > 0) {
           const extraAdults = counts.adults - BASE_ADULT_OCCUPANCY;
-          totalExtraAdultCost += extraAdults * rates.ExtraAdultRate * nights;
+          const costForThisRoom = extraAdults * parseFloat(rates.ExtraAdultRate) * nights;
+          totalExtraAdultCost += costForThisRoom;
         }
 
+        // Extra child calculation
         if (rates.ExtraChildRate > 0) {
-          childrenAgesForRoom.forEach(age => {
+          childrenAgesForRoom.forEach((age) => {
             const parsedAge = parseInt(age);
             if (parsedAge > CHILD_AGE_LIMIT) {
-              totalExtraChildCost += rates.ExtraChildRate * nights;
+              const costForThisChild = parseFloat(rates.ExtraChildRate) * nights;
+              totalExtraChildCost += costForThisChild;
             }
           });
         }
@@ -150,12 +150,13 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
     }
 
     if (onConfirm) {
-      onConfirm({
+      const dataToPass = {
         guestCounts,
         childrenAges,
         extraAdultCost: totalExtraAdultCost,
         extraChildCost: totalExtraChildCost,
-      });
+      };
+      onConfirm(dataToPass);
     }
   };
 
@@ -175,7 +176,6 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
       instanceNum: i + 1,
     }))
   );
-
 
   return (
     <div className="w-full max-w-3xl mx-auto p-4 font-sans">

@@ -303,14 +303,14 @@ function AllRooms() {
               initialCheckIn={bookingDetails.checkIn}
               initialCheckOut={bookingDetails.checkOut}
             />
-            <div className="flex justify-center md:justify-end mt-4">
+            {/* <div className="flex justify-center md:justify-end mt-4">
               <button
                 onClick={() => setIsEditing(false)}
                 className="px-5 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
               >
                 Done
               </button>
-            </div>
+            </div> */}
           </div>
         ) : (
           <div className="flex flex-row justify-center items-center gap-4">
