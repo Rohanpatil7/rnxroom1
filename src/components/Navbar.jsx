@@ -38,7 +38,7 @@ const Navbar = ({hotelData}) => {
 
   return (
     <nav
-      className={`sticky h-18 align-baseline top-0  left-0 text-black bg-white w-full flex items-center justify-between sm:px-4 md:px-24 lg:px-32 xl:px-32 transition-all duration-500 z-50 cursor-default` }
+      className={`sticky h-18 align-baseline top-0  left-0 text-black bg-white w-full flex items-center justify-between sm:px-4 md:px-24 lg:px-32 xl:px-32 transition-all duration-500 z-50 cursor-default border-b border-indigo-50 drop-shadow-md` }
         // ${
       //   isScrolled
       //     ? "bg-white/80 shadow-md text-gray-700 backdrop-blur-lg py-3 md:py-4"
@@ -51,7 +51,7 @@ const Navbar = ({hotelData}) => {
         <img
           src={hotelData?.LogoUrl}
           alt="logo"
-          className={`size-16  justify-center  items-center`}
+          className={`size-16  justify-center  items-center hover:scale-110 transition-all duration-300`}
           //  ${isScrolled && "invert opacity-100 "}
         />
       </Link>

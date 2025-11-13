@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 
-// ✅ Helper to format dates
 const formatDate = (date) => {
   if (!date) return 'Select Date';
   return new Date(date).toLocaleString('en-GB', {
@@ -11,7 +10,6 @@ const formatDate = (date) => {
   });
 };
 
-// ✅ Helper to format currency
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
@@ -29,13 +27,13 @@ function Costcard({ bookingDetails, hotelData, taxData }) {
     dates = {},
     totalPrice = 0,
     extraAdultCost = 0,
-    extraChildCost = 0
+    extraChildCost = 0,
   } = bookingDetails;
 
   const { checkIn, checkOut, nights = 0 } = dates;
   const totalRooms = rooms.reduce((sum, item) => sum + item.quantity, 0);
 
-  const serviceFee = 299;
+  const serviceFee = hotelData?.ServiceCharges;
   const taxableAmount = totalPrice + extraAdultCost + extraChildCost;
 
   const totalGstAmount =
@@ -46,12 +44,10 @@ function Costcard({ bookingDetails, hotelData, taxData }) {
 
   const grandTotal = taxableAmount + totalGstAmount + serviceFee;
 
-  const hotelImage =
-    hotelData?.HotelImages?.[0] ||
-    'https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=1925&auto=format&fit=crop';
+  const hotelImage = hotelData?.HotelImages?.[0];
 
   return (
-    <div className="max-w-sm rounded-xl bg-white font-sans shadow-lg overflow-hidden">
+    <div className="max-w-screen rounded-xl md:w-full bg-white font-sans shadow-lg overflow-hidden mb-12 ">
       {/* Hotel Image */}
       <img className="w-full h-48 object-cover" src={hotelImage} alt="Hotel" />
 
@@ -65,9 +61,11 @@ function Costcard({ bookingDetails, hotelData, taxData }) {
             {formatDate(checkIn)} ----- {nights} Night{nights !== 1 ? 's' : ''} ----- {formatDate(checkOut)}
           </p>
 
+          {/* Use NavLink so Router handles the transition */}
           <NavLink
             to="/allrooms"
-            className="mt-2 cursor-pointer text-xs font-medium text-indigo-400 hover:text-indigo-500"
+            state={{ from: 'booking', editMode: true }}
+            className="mt-2 inline-block cursor-pointer text-xs font-medium text-indigo-400 hover:text-indigo-500"
           >
             &larr; Edit Stay Details
           </NavLink>
@@ -93,7 +91,7 @@ function Costcard({ bookingDetails, hotelData, taxData }) {
             ))}
           </div>
 
-          <hr className="my-2 border-t border-dotted border-gray-300" />
+          <hr className="my-2 border border-dotted border-black" />
 
           {/* Cost Breakdown */}
           <div className="space-y-1">
@@ -103,20 +101,22 @@ function Costcard({ bookingDetails, hotelData, taxData }) {
                 {formatCurrency(totalPrice)}
               </p>
             </div>
-            
+
             {extraAdultCost > 0 && (
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-600">Extra Adult Cost</p>
-                    <p className="font-medium text-gray-800">{formatCurrency(extraAdultCost)}</p>
-                </div>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">Extra Adult Cost</p>
+                <p className="font-medium text-gray-800">{formatCurrency(extraAdultCost)}</p>
+              </div>
             )}
 
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">Extra Child Cost</p>
-              <p className="font-medium text-gray-800">
-                {formatCurrency(extraChildCost)}
-              </p>
-            </div>
+            {extraChildCost > 0 && (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">Extra Child Cost</p>
+                <p className="font-medium text-gray-800">
+                  {formatCurrency(extraChildCost)}
+                </p>
+              </div>
+            )}
 
             {/* Taxes */}
             {taxData?.taxes?.map((tax, i) => (
@@ -145,8 +145,8 @@ function Costcard({ bookingDetails, hotelData, taxData }) {
 
           {/* Grand Total */}
           <div className="flex items-center justify-between">
-            <p className="text-lg font-semibold text-indigo-700">Grand Total</p>
-            <p className="text-lg font-semibold text-indigo-700">
+            <p className="text-xl font-semibold text-indigo-700">Grand Total</p>
+            <p className="text-xl font-semibold text-indigo-700">
               {formatCurrency(grandTotal)}
             </p>
           </div>

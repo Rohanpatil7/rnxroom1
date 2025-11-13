@@ -59,7 +59,7 @@ function RoomOption({ room, mealOption, onAddToCart, isBookingDisabled, bookingD
       <div className="w-1/3 text-right flex flex-col items-end">
         {hasPrice ? (
           <>
-            <p className="text-md font-medium text-gray-900 mb-1">
+            <p className="text-xl font-medium text-gray-900 mb-1">
               ₹{finalPrice.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
             </p>
             <p className="text-xs text-gray-500 mb-3">For {bookingDetails.adults || 1} Adult(s) per night</p>

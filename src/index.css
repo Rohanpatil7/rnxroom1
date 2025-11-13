@@ -10,7 +10,7 @@
 
 *{
   font-family:  'Rubik','Segoe UI', Tahoma, Verdana, sans-serif;
-  
+  scroll-behavior: smooth;
 }
 .font-Rubik {
   font-family: "Rubik", sans-serif !important;

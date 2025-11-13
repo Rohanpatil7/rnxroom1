@@ -9,12 +9,28 @@ const COMMON_CREDENTIALS = {
   Password: "booking@123",
 };
 
-// --- Dynamic Hotel Parameter ---
-// This function retrieves the hotel identifier from the URL's query string.
+
+// --- Dynamic Hotel Parameter with localStorage Support ---
+// ✅ UPDATED: This function now preserves the parameter across page reloads
 function getParameterFromUrl() {
+  // 1️⃣ Try to get from URL first
   const params = new URLSearchParams(window.location.search);
-  // Fallback to the default parameter from the documentation if not found in the URL.
-  return params.get("parameter") || "QWVYSS9QVTREQjNLYzd0bjRZRTg4dz09";
+  const urlParam = params.get("parameter");
+  
+  // 2️⃣ Get from localStorage as fallback
+  const storedParam = localStorage.getItem("hotelParam");
+  
+  // 3️⃣ Use whichever is available
+  const finalParam = urlParam || storedParam || "";
+  
+  // 4️⃣ Save to localStorage if from URL (for future page loads)
+  if (urlParam && urlParam !== storedParam) {
+    localStorage.setItem("hotelParam", urlParam);
+    console.log("✅ Saved parameter to localStorage:", urlParam);
+  }
+  
+  console.log("🔍 Using parameter:", finalParam);
+  return finalParam;
 }
 
 // --- API Endpoint Configurations ---

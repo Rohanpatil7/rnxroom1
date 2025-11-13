@@ -57,7 +57,7 @@ const Guestinfo = ({ guestInfoData, onGuestInfoChange }) => {
 
     if (!guestInfoData || guestInfoData.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center p-4 text-center bg-white rounded-2xl shadow-md mt-4 max-w-2xl ">
+            <div className="flex flex-col items-center justify-center p-2 text-center bg-white rounded-2xl shadow-md mt-2 max-w-2xl ">
                 <h3 className="text-md font-bold text-gray-800">Guest Information</h3>
                 <p className="mt-0.5 text-gray-500">Guest data not found. Please specify the number of guests first.</p>
             </div>
@@ -66,17 +66,17 @@ const Guestinfo = ({ guestInfoData, onGuestInfoChange }) => {
     
     return (
         // --- REMOVED: <form> and onSubmit handler ---
-        <div className="w-full max-w-3xl  p-2 font-semibold">
-            <div className="w-full bg-white rounded-2xl shadow-xl p-6 sm:p-8 space-y-8">
+        <div className="w-full max-w-3xl p-1 font-semibold font-Rubik">
+            <div className="w-full bg-white rounded-2xl shadow-md p-4 sm:p-4 space-y-2">
                 {/* Primary Contact Section */}
                 <div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900 text-center">Guest Information</h1>
+                    <h1 className="text-md sm:text-2xl font-bold text-gray-900 text-center">Guest Information</h1>
                     <p className="text-sm  text-gray-500 mt-0.5 text-center">Please provide one guest name for each room.</p>
                 </div>
-                <div className="p-4 border border-gray-200 rounded-xl bg-gray-50">
-                    <h2 className="text-md font-semibold text-gray-800 mb-1">Primary Booking Contact</h2>
+                <div className="p-2.5 border border-gray-200 rounded-xl bg-gray-50">
+                    <h2 className="text-sm font-semibold text-gray-800 mb-1">Primary Booking Contact</h2>
                     <div className="mb-4">
-                        <label htmlFor="primaryContact" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                        <label htmlFor="primaryContact" className="block text-xs font-medium text-gray-700 mb-1">Full Name</label>
                         <input
                             type="text"
                             id="primaryContact"
@@ -94,7 +94,7 @@ const Guestinfo = ({ guestInfoData, onGuestInfoChange }) => {
                             checked={applyToAll}
                             onChange={handleApplyToAllChange}
                         />
-                        <label htmlFor="applyToAllRooms" className="ml-2 block text-xs text-gray-800">
+                        <label htmlFor="applyToAllRooms" className="ml-2 block text-xs text-gray-800 font-medium">
                             Use this name for all rooms.
                         </label>
                     </div>
@@ -107,13 +107,13 @@ const Guestinfo = ({ guestInfoData, onGuestInfoChange }) => {
                         const instanceNum = instanceId.slice(lastUnderscoreIndex + 1);
 
                         return (
-                            <div key={instanceId} className="p-4 border border-gray-200 rounded-xl shadow-sm">
-                                <h3 className="text-md font-semibold text-gray-800 border-b border-gray-200 pb-1 mb-1">
+                            <div key={instanceId} className="p-2.5 border border-gray-200 rounded-xl shadow-sm">
+                                <h3 className="text-sm font-semibold text-gray-800 border-b border-gray-200 pb-1 mb-1">
                                     {title} #{parseInt(instanceNum) + 1}
                                 </h3>
                                 <div className="space-y-4">
                                     <div>
-                                        <label htmlFor={`guest-name-${instanceId}`} className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label htmlFor={`guest-name-${instanceId}`} className="block text-xs font-medium text-gray-700 mb-1">
                                             Guest Full Name
                                         </label>
                                         <input
@@ -146,7 +146,7 @@ const Guestinfo = ({ guestInfoData, onGuestInfoChange }) => {
 
                 {/* Special Requests */}
                 <div>
-                    <label htmlFor="specialRequests" className="block text-md font-semibold text-gray-800 mb-2">
+                    <label htmlFor="specialRequests" className="block text-sm font-semibold text-gray-800 mb-2">
                         Special Requests (Optional)
                     </label>
                     <textarea

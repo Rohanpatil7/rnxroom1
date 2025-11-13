@@ -7,24 +7,32 @@ import tailwind from "@tailwindcss/vite";
 
 // https://vitejs.dev/config/
 export default ({ mode }) => {
-  // eslint-disable-next-line no-undef
-  const env = loadEnv(mode, process.cwd(), '');
+  const env = loadEnv(mode, ".", "");
   const isDev = mode === "development";
 
   const BASE_PATH = isDev ? '/' : '/booking/';
 
-  // This proxy configuration will now ONLY be used in local development
+  // ✅ Proxy configuration for local development only
   const proxyConfig = {
     '/initiate-payment': {
-      target: 'http://localhost:5000', // Your local Node.js server
+      target: 'http://localhost:5000',
       changeOrigin: true,
       secure: false,
     },
+
     '/booking/api': {
-      target: env.VITE_API_URL || 'https://xpresshotelpos.com',
+      target: env.VITE_API_URL || 'https://membership.xpresshotelpos.com/',
       changeOrigin: true,
       secure: true,
       rewrite: (path) => path.replace(/^\/api/, '/booking/api'),
+    },
+
+    // ✅ Added Option 2 proxy for Easebuzz PHP backend
+    '/pg_demo': {
+      target: 'https://membership.xpresshotelpos.com/',
+      changeOrigin: true,
+      secure: true,
+      rewrite: (path) => path.replace(/^\/pg_demo/, '/pg_demo'),
     },
   };
 
@@ -36,7 +44,6 @@ export default ({ mode }) => {
       https: true,
       port: 5173,
       strictPort: false,
-      // The proxy is now only applied if in development mode
       proxy: isDev ? proxyConfig : undefined,
     },
     build: {
@@ -46,9 +53,11 @@ export default ({ mode }) => {
     define: {
       _API_BASE_: JSON.stringify(BASE_PATH),
       _BACKEND_URL_: JSON.stringify(
-        env.VITE_API_URL || "https://xpresshotelpos.com/booking/api"
+        env.VITE_API_URL || ""
       ),
-      _ENCODED_STRING_: JSON.stringify(env.VITE_ENCODED_STRING || "QWVYSS9QVTREQjNLYzd0bjRZRTg4dz09"),
+      _ENCODED_STRING_: JSON.stringify(
+        env.VITE_ENCODED_STRING || ""
+      ),
     },
   });
 };

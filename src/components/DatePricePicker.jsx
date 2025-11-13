@@ -29,12 +29,12 @@ const UserIcon = () => (
   </svg>
 );
 const ChevronLeftIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-black">
     <path d="m15 18-6-6 6-6"></path>
   </svg>
 );
 const ChevronRightIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-black">
     <path d="m9 18 6-6-6-6"></path>
   </svg>
 );
@@ -160,7 +160,7 @@ export default function DatePricePicker({
     for (let i = 1; i <= daysInMonth; i++) {
       const day = new Date(year, month, i);
 
-      let classes = "aspect-square flex flex-col items-center justify-center rounded-md cursor-pointer transition-colors duration-200 text-xs sm:text-sm sm:w-full text-black";
+      let classes = "aspect-square flex flex-col items-center justify-center rounded-md cursor-pointer transition-colors duration-200 text-sm sm:text-sm sm:w-auto h-8 text-black ";
       const isPast = day < today;
       const isToday = day.getTime() === today.getTime();
       const isCheckIn = checkInDate && day.getTime() === new Date(checkInDate).getTime();
@@ -190,7 +190,7 @@ export default function DatePricePicker({
     }
     
     return (
-      <div className="absolute top-20 mt-2 w-full max-w-12xl sm:w-8xl left-1/2 -translate-x-1/2 md:w-auto md:max-w-full md:left-0 md:translate-x-0 bg-white p-4 rounded-md shadow-2xl shadow-indigo-300 border border-gray-200 z-50">
+      <div className="absolute top-20 mt-2 w-full max-w-12xl sm:w-8xl left-1/2 -translate-x-1/2 md:w-12xl md:max-w-full md:left-0 md:translate-x-0 bg-white p-4 rounded-md shadow-xl shadow-indigo-200 border border-gray-600 sm:w-full z-50">
         <div className="flex items-center justify-between mb-4">
           <button type="button" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 rounded-full hover:bg-gray-100">
             <ChevronLeftIcon />
@@ -205,9 +205,9 @@ export default function DatePricePicker({
         <div className="grid grid-cols-7 gap-8 sm:gap-6 text-center text-xs sm:text-sm text-gray-500 mb-2">
           <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
         </div>
-        <div className="grid grid-cols-7 gap-8 text-center items-center">{days}</div>
+        <div className="grid grid-cols-7 gap-4 text-center items-center">{days}</div>
         <div className="mt-4 flex justify-end">
-          <button onClick={() => { setCheckInDate(null); setCheckOutDate(null); }} className="text-sm font-semibold text-gray-600 hover:text-gray-900 px-4 py-2  hover:bg-indigo-300">
+          <button onClick={() => { setCheckInDate(null); setCheckOutDate(null); }} className="text-sm font-semibold text-gray-600 hover:text-indigo-900 px-4 py-2  hover:bg-indigo-300">
             Clear Dates
           </button>
         </div>
@@ -216,12 +216,12 @@ export default function DatePricePicker({
   };
 
   return (
-    <div className="w-full  flex items-start justify-center px-4 sm:px-1 font-sans">
+    <div className="w-full  flex items-start justify-center px-2 sm:px-1 font-Rubik ">
       <div ref={pickerRef} className="relative w-full  max-w-3xl">
-        <div className="bg-white rounded-md md:rounded-md shadow-lg p-2 flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-1 w-full">
+        <div className="bg-white rounded-md md:rounded-md shadow-lg flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-1 w-full border border-gray-200">
           
           {/* Check-in */}
-          <div onClick={() => { setIsCalendarOpen(true);  }} className="flex-1 w-full p-2 rounded-md hover:bg-gray-100 cursor-pointer text-left">
+          <div onClick={() => { setIsCalendarOpen(true);  }} className="flex-1 w-full p-2 rounded-md  cursor-pointer text-left hover:bg-indigo-100">
             <label className="text-xs font-bold text-gray-700 px-2">Check-in</label>
             <div className="flex items-center space-x-2 px-2">
               <CalendarIcon />
@@ -234,7 +234,7 @@ export default function DatePricePicker({
           <div className="h-px w-full bg-gray-200 md:h-8 md:w-px"></div>
 
           {/* Check-out */}
-          <div onClick={() => { setIsCalendarOpen(true);  }} className="flex-1 w-full p-2 rounded-md hover:bg-gray-100 cursor-pointer text-left">
+          <div onClick={() => { setIsCalendarOpen(true);  }} className="flex-1 w-full p-2 rounded-md hover:bg-indigo-100 cursor-pointer text-left">
             <label className="text-xs font-bold text-gray-700 px-2">Check-out</label>
             <div className="flex items-center space-x-2 px-2">
               <CalendarIcon />

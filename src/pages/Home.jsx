@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react"; // CHANGED: Imported useCallback
+import React, { useState, useEffect, useCallback } from "react";
 import DatePricePicker from "../components/DatePricePicker.jsx";
 import { NavLink } from "react-router-dom";
 
@@ -14,16 +14,88 @@ const ChevronRightIcon = (props) => (
   </svg>
 );
 
+const PLACEHOLDER_ICON =
+  "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2220%22%20height%3D%2220%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20rx%3D%224%22%20fill%3D%22%23e5e7eb%22/%3E%3Cpath%20d%3D%22M4%2010h12%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22/%3E%3Cpath%20d%3D%22M10%204v12%22%20stroke%3D%22%239ca3af%22%20stroke-width%3D%222%22/%3E%3C/svg%3E";
+
+
+// --- MODIFICATION: Added helpers & key for sessionStorage ---
+const BOOKING_DETAILS_KEY = 'bookingDetails';
+
+const getTomorrow = () => {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+  return tomorrow;
+};
+
+const getDayAfterTomorrow = () => {
+  const tomorrow = getTomorrow();
+  const dayAfter = new Date(tomorrow);
+  dayAfter.setDate(dayAfter.getDate() + 1);
+  return dayAfter;
+};
+// --- END OF MODIFICATION ---
+
 
 function Home({ hotelData, isBookingDisabled }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   
-  const [bookingDetails, setBookingDetails] = useState({
-    checkIn: null,
-    checkOut: null,
-    nights: 0,
-  });
+  // --- MODIFICATION: Updated state to use sessionStorage AND URL Params ---
+  const [bookingDetails, setBookingDetails] = useState(() => {
+    // 1. Check for URL Parameters (Priority 1)
+    const params = new URLSearchParams(window.location.search);
+    const urlCheckIn = params.get('checkin');
+    const urlCheckOut = params.get('checkout');
+    const urlAdults = parseInt(params.get('adults'), 10);
+    const urlChildren = parseInt(params.get('children'), 10);
 
+    if (urlCheckIn && urlCheckOut && new Date(urlCheckIn) > new Date()) {
+      const checkIn = new Date(urlCheckIn);
+      const checkOut = new Date(urlCheckOut);
+      const nights = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+      
+      return {
+        checkIn,
+        checkOut,
+        nights,
+        adults: urlAdults || 1,
+        children: urlChildren || 0,
+      };
+    }
+
+    // 2. Define Defaults
+    const defaultDetails = {
+      checkIn: getTomorrow(),
+      checkOut: getDayAfterTomorrow(),
+      nights: 1,
+      adults: 1,
+      children: 0,
+    };
+
+    // 3. Check Session Storage (Priority 2)
+    const savedDetails = sessionStorage.getItem(BOOKING_DETAILS_KEY);
+    if (savedDetails) {
+      try {
+        const parsed = JSON.parse(savedDetails);
+        // IMPORTANT: Convert date strings from JSON back to Date objects
+        return {
+          ...defaultDetails,
+          ...parsed,
+          checkIn: parsed.checkIn ? new Date(parsed.checkIn) : defaultDetails.checkIn,
+          checkOut: parsed.checkOut ? new Date(parsed.checkOut) : defaultDetails.checkOut,
+        };
+      } catch (e) {
+        console.error("Failed to parse booking details from storage", e);
+      }
+    }
+    
+    // 4. Return defaults if nothing is saved
+    return defaultDetails;
+  });
+  // --- END OF MODIFICATION ---
+
+  
   const hasImages = hotelData?.HotelImages && hotelData.HotelImages.length > 0;
 
   // CHANGED: Wrapped slide navigation functions in useCallback
@@ -41,6 +113,21 @@ function Home({ hotelData, isBookingDisabled }) {
     );
   }, [hasImages, hotelData?.HotelImages.length]);
 
+
+     // Robust onError handler—applies fallback exactly once
+  const applyFallback = (e, fallbackSrc = PLACEHOLDER_ICON) => {
+    const img = e.currentTarget;
+    if (img.dataset.fallbackApplied === "true") return;
+    img.dataset.fallbackApplied = "true";
+    img.src = fallbackSrc;
+  };
+
+  // --- MODIFICATION: Added useEffect to save state ---
+  // This saves any date changes back to storage
+  useEffect(() => {
+    sessionStorage.setItem(BOOKING_DETAILS_KEY, JSON.stringify(bookingDetails));
+  }, [bookingDetails]);
+  // --- END OF MODIFICATION ---
 
   // Effect for auto-sliding every 5 seconds
   useEffect(() => {
@@ -102,24 +189,39 @@ function Home({ hotelData, isBookingDisabled }) {
                 ></div>
               ))}
             </div>
-             {/* DatePricePicker placed below the image slider */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-full max-w-4xl p-4 flex flex-col items-center justify-center">
-        <p className="text-xl font-semibold">Select Date To Book Your Room</p>
-        <DatePricePicker onDateChange={setBookingDetails} />
-      </div>
+             
+            {/* --- MODIFICATION: DatePricePicker was removed from here --- */}
           </>
           
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-blue-600">
-             <div className="w-full max-w-4xl">
-                <DatePricePicker onDateChange={setBookingDetails} />
-              </div>
+          // --- MODIFICATION: Replaced picker with a simple fallback bg ---
+          <div className="w-full h-full flex items-center justify-center bg-gray-200">
+            <p className="text-gray-500">No hotel images available.</p>
           </div>
+          // --- END OF MODIFICATION ---
         )}
       </section>
 
+   
+      <section className="relative z-10 -mt-20 md:-mt-16 w-full max-w-5xl mx-auto p-4 sm:p-6">
+        <div className="bg-white rounded-lg shadow-xl border border-gray-100 p-6 flex flex-col items-center">
+          <h2 className="text-xl text-center md:text-2xl font-semibold text-gray-900">Pick Date To Book Your Room</h2>
+          <p className="text-sm text-center text-gray-600 mt-1">Standard Check-in: {hotelData.StdCheckinTime} -- Standard Check-out: {hotelData.StdChecoutTime}</p>
+          
+          <div className="w-full max-w-4xl mt-4 ">
+            <DatePricePicker 
+              onDateChange={setBookingDetails}
+              initialCheckIn={bookingDetails.checkIn}
+              initialCheckOut={bookingDetails.checkOut}
+            />
+          </div>
+        </div>
+      </section>
+   
+
       {/* Main Content Section */}
-      <div className="flex mt-4 flex-col h-full w-full">
+      {/* --- MODIFICATION: Changed mt-4 to mt-8 for spacing --- */}
+      <div className="flex mt-8 flex-col h-full w-full">
 
         {/* --- MODIFIED SECTION: About Property & Facilities --- */}
         <div className="max-w-7xl mx-auto w-full flex flex-col lg:flex-row gap-12 px-4 py-10">
@@ -144,7 +246,7 @@ function Home({ hotelData, isBookingDisabled }) {
                         {hotelData?.HotelAmenities.map((amenity, index) => (
                             <div key={index} className="flex flex-col items-center text-center">
                                 <div className="size-12 p-2  rounded-lg">
-                                    <img src={amenity.IconUrl} alt={amenity.Name} className="w-full h-full object-contain"/>
+                                    <img src={amenity.IconUrl || PLACEHOLDER_ICON} alt={amenity.Name}  onError={(e) => applyFallback(e, PLACEHOLDER_ICON)} className="w-full h-full object-contain"/>
                                 </div>
                                 <div className="mt-2">
                                     <h3 className="text-sm font-medium text-slate-600">{amenity.Name}</h3>
@@ -183,21 +285,22 @@ function Home({ hotelData, isBookingDisabled }) {
             <p className="text-sm text-gray-500">{/* --- MODIFICATION START --- */}
       {bookingDetails.checkIn && bookingDetails.checkOut ? (
         <span className="font-medium text-indigo-600">
-          {`${new Date(bookingDetails.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(bookingDetails.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} (${bookingDetails.nights} Night${bookingDetails.nights !== 1 ? 's' : ''})`}
+          {/* UPDATED: Now includes guest count */}
+          {`${new Date(bookingDetails.checkIn).toLocaleDateString('en-US', { month: 'short', day: 'numeric',year:'numeric' })} - ${new Date(bookingDetails.checkOut).toLocaleDateString('en-US', { month: 'short', day: 'numeric',year:'numeric' })}`}
         </span>
       ) : (
         'Select your dates to see available rooms.'
       )}
       {/* --- MODIFICATION END --- */}</p>
           </div>
-          <div className="w-auto">
+          <div className="w-auto hover:scale-110 transition-all">
             <NavLink
               to="/allrooms"
               state={{ initialBookingDetails: bookingDetails }}
-              className={`rounded-lg w-full px-6 py-3 text-sm font-medium border transition-all bg-linear-to-top from-sky-500 to-indigo-500 ${
+              className={`rounded-lg w-full px-6 py-3 text-sm font-medium border transition-all  ${
                 isBookingDisabled
                   ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-lg shadow-indigo-200"
+                  : "bg-gradient-to-b from-indigo-500 via-indigo-600 to-indigo-700   text-white hover:bg-indigo-700 hover:shadow-lg shadow-indigo-200 backdrop-brightness-75 "
               }`}
             >
               Select Rooms

@@ -21,12 +21,12 @@ function Roompop({ room, onClose }) {
   return (
     // Modal overlay: covers the entire screen
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-opacity-50"
+      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm  bg-opacity-50"
       onClick={onClose} // Close modal if you click on the overlay
     >
       {/* Modal content: stop propagation to prevent closing when clicking inside */}
       <div
-        className="relative w-full max-w-xl p-6 bg-white rounded-lg shadow-xl"
+        className="relative w-full max-w-xl p-6 bg-indigo-50 rounded-lg shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h4 className="text-xl font-semibold text-indigo-800  ">{room.title} Details</h4>
@@ -71,7 +71,7 @@ function Roompop({ room, onClose }) {
           className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
         >
           {/* A simple 'X' icon for closing */}
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          <svg className="w-6 h-6 hover:text-indigo-600 hover:scale-115 duration-200 drop-shadow-black ease-in-out cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
     </div>

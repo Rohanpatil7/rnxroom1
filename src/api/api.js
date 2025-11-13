@@ -2,14 +2,14 @@
 // Sets the base URL for all API calls.
 // It prioritizes the VITE_API_BASE environment variable,
 // but falls back to the URL from the documentation if it's not set.
-export const API_BASE = import.meta.env.VITE_API_BASE ?? "https://xpresshotelpos.com/booking/api";
+export const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
 // --- Common Credentials ---
 // Contains credentials required for every API request.
 // Uses environment variables for security, with fallback values from the docs.
 const COMMON_CREDENTIALS = {
-  UserName: import.meta.env.VITE_API_USERNAME ?? "bookinguser",
-  Password: import.meta.env.VITE_API_PASSWORD ?? "booking@123",
+  UserName: import.meta.env.VITE_API_USERNAME ?? "",
+  Password: import.meta.env.VITE_API_PASSWORD ?? "",
 };
 
 // --- Dynamic Hotel Parameter ---

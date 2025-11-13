@@ -1,42 +1,79 @@
-import React, { useEffect, useState } from 'react';
-import { Routes, Route, useSearchParams } from 'react-router-dom';
-import Navbar from './components/Navbar.jsx';
-import Home from './pages/Home.jsx';
-import AllRooms from './pages/AllRooms.jsx';
-import Booking from './pages/Booking.jsx';
-import { getHotelDetails } from './api/api_services.js';
-
-// Import the success and failure components
-import PaySuccess from './pages/Paysuccess.jsx';
-import PayFailure from './pages/Payfailure.jsx';
+import React, { useEffect, useState } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import Navbar from "./components/Navbar.jsx";
+import Home from "./pages/Home.jsx";
+import AllRooms from "./pages/AllRooms.jsx";
+import Booking from "./pages/Booking.jsx";
+import { getHotelDetails } from "./api/api_services.js";
+import PaySuccess from "./pages/Paysuccess.jsx";
+import PayFailure from "./pages/Payfailure.jsx";
+import {BallTriangle} from "react-loader-spinner";
 
 function App() {
   const [hotelData, setHotelData] = useState(null);
-  const [loading, setLoading] = useState(false); // Set initial loading to false
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [searchParams,setSearchParams] = useSearchParams();
 
-  // This will dynamically get whatever 'parameter' is in the URL
-  const encodedParam = searchParams.get("parameter");
+   const getQueryParam = (name) => {
+    let query = window.location.search;
+    if (!query && window.location.hash.includes("?")) {
+      query = window.location.hash.split("?")[1];
+    }
+    const params = new URLSearchParams(query);
+    return params.get(name);
+  };
+
+  // ✅ Get URL parameter (already decoded by URLSearchParams)
+  const urlParam = getQueryParam("parameter");
+  
+  // ✅ Get stored parameter
+  const storedParam = localStorage.getItem("hotelParam");
+  
+  // ✅ Use URL param if available, otherwise stored
+  const hotelParam = urlParam || storedParam;
+
+   // ✅ Save to localStorage immediately if URL param exists
+  if (urlParam && urlParam !== storedParam) {
+    localStorage.setItem("hotelParam", urlParam);
+    console.log("✅ Saved parameter to localStorage:", urlParam);
+  }
+
+
+  console.log("🔍 Debug Info:", {
+    urlParam,
+    storedParam,
+    hotelParam,
+    urlLength: urlParam?.length,
+    storedLength: storedParam?.length
+  });
 
   useEffect(() => {
     const fetchHotelData = async () => {
-
-      // This will cause a re-render, and the effect will run again.
-      if (!encodedParam) {
-        setSearchParams({ parameter: "QWVYSS9QVTREQjNLYzd0bjRZRTg4dz09" });
-        return; // Stop execution for this render
+      if (!hotelParam) {
+        setError("Trouble to find hotel.");
+        return;
       }
 
-
-     // If we have a parameter, proceed to fetch the data.
       try {
         setLoading(true);
-        const data = await getHotelDetails(encodedParam);
+
+        // ✅ Save DECODED parameter from URL
+        if (urlParam) {
+          localStorage.setItem("hotelParam", urlParam);
+          console.log("✅ Saved to localStorage:", urlParam);
+        }
+
+        // ✅ Use parameter directly (already decoded by URLSearchParams)
+        const data = await getHotelDetails(hotelParam);
 
         if (data?.result?.[0]) {
           if (data.result[0].Error) {
-            setError(`API Error: ${data.result[0].Error}`);
+            setError(` ${data.result[0].Error}`);
+            
+            // ✅ Clear localStorage if API says invalid
+            if (data.result[0].Error.includes("Truble to find hotel")) {
+              localStorage.removeItem("hotelParam");
+            }
           } else {
             setHotelData(data.result[0]);
             setError(null);
@@ -46,42 +83,69 @@ function App() {
         }
       } catch (err) {
         console.error("Failed to fetch hotel data:", err);
-        setError(err.message || 'An unknown network error occurred. Please check the console.');
+        setError(err.message || "An unknown network error occurred.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchHotelData();
-  }, [encodedParam, setSearchParams]); // Effect depends on the parameter
+  }, [hotelParam, urlParam]);
 
-  // Show a loading message only when a fetch is in progress
+  // ✅ Loading UI
   if (loading) {
-    return <div className="flex items-center justify-center h-screen text-xl font-semibold">Loading Hotel Information...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen text-xl font-semibold">
+        <BallTriangle
+      height={100}
+      width={100}
+      radius={5}
+      color="#3d52f2"
+      ariaLabel="ball-triangle-loading"
+      wrapperStyle={{}}
+      wrapperClass=""
+      visible={true}
+/>
+      </div>
+    );
   }
 
-  // If there's an error (including a missing parameter), show the error.
+  // ✅ Error UI
   if (error) {
-    return <div className="flex items-center justify-center h-screen text-xl font-semibold text-red-600">Error: {error}</div>;
+    return (
+      <div className="flex items-center justify-center h-screen text-xl font-semibold text-red-600">
+        Error: {error}
+      </div>
+    );
   }
 
-  // If there's no data and no error (initial state), you can show a generic message.
+  // ✅ Initial (no data) UI
   if (!hotelData) {
-      return <div className="flex items-center justify-center h-screen text-xl font-semibold">Please provide a hotel parameter in the URL.</div>
+    return (
+      <div className="flex items-center justify-center h-screen text-xl font-semibold">
+        Please provide a hotel parameter in the URL.
+      </div>
+    );
   }
 
   return (
-    <div className='bg-gray-50'>
+    <div className="bg-gray-50">
       <Navbar hotelData={hotelData} />
-      <div className='h-fit relative'>
-        <Routes>
-          <Route path='/' element={<Home hotelData={hotelData} />} />
-          <Route path='/allrooms' element={<AllRooms hotelData={hotelData} room />} />
-          <Route path='/booking/new' element={<Booking hotelData={hotelData} />} />
-          
-           {/* Add routes for payment status pages */}
-          <Route path='/paymentsuccess' element={<PaySuccess />} />
-          <Route path='/paymentfailure' element={<PayFailure />} />
+      <div className="h-fit relative">
+        <Routes >
+          {/* Redirect all unknown routes to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/" element={<Home hotelData={hotelData} />} />
+          <Route
+            path="/allrooms"
+            element={<AllRooms hotelData={hotelData} room />}
+          />
+          <Route
+            path="/booking/new"
+            element={<Booking hotelData={hotelData} />}
+          />
+          <Route path="/payment-success" element={<PaySuccess />} />
+          <Route path="/payment-failure" element={<PayFailure />} />
         </Routes>
       </div>
     </div>
