@@ -1,7 +1,20 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-const PaySuccess = () => {
+// --- [NEW] Define all keys to be cleared ---
+const BOOKING_DETAILS_KEY = 'currentBookingDetails';
+const TEMP_GUEST_COUNTS_KEY = 'tempGuestCounts';
+const TEMP_CHILDREN_AGES_KEY = 'tempChildrenAges';
+const BOOKING_CART_KEY = 'bookingCart';
+const TEMP_CONTACT_KEY = 'tempContactDetails';
+const TEMP_GUESTS_KEY = 'tempAdditionalGuests';
+const TEMP_SHOW_GST_KEY = 'tempShowGst';
+const TEMP_GST_DETAILS_KEY = 'tempGstDetails';
+const BOOKING_STEP_KEY = 'tempBookingStep';
+// --- [END NEW] ---
+
+const PayFailure = () => { // Note: Your component was misnamed 'PaySuccess' in the original file
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [paymentDetails, setPaymentDetails] = useState(null);
@@ -11,10 +24,25 @@ const PaySuccess = () => {
         if (Object.keys(details).length > 0) {
             setPaymentDetails(details);
         }
+
+        // --- [NEW] Clear all booking-related session storage ---
+        // This is the crucial fix
+        sessionStorage.removeItem(BOOKING_DETAILS_KEY);
+        sessionStorage.removeItem(TEMP_GUEST_COUNTS_KEY);
+        sessionStorage.removeItem(TEMP_CHILDREN_AGES_KEY);
+        sessionStorage.removeItem(BOOKING_CART_KEY);
+        sessionStorage.removeItem(TEMP_CONTACT_KEY);
+        sessionStorage.removeItem(TEMP_GUESTS_KEY);
+        sessionStorage.removeItem(TEMP_SHOW_GST_KEY);
+        sessionStorage.removeItem(TEMP_GST_DETAILS_KEY);
+        sessionStorage.removeItem(BOOKING_STEP_KEY);
+        // --- [END NEW] ---
+
     }, [searchParams]);
 
     const handleBackToHome = () => {
-        navigate('/allrooms');
+        // --- [MODIFIED] Navigate directly to 'home' ---
+        navigate('*');
     };
 
     const tableRows = paymentDetails ? [
@@ -34,7 +62,8 @@ const PaySuccess = () => {
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
             <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl max-w-2xl w-full text-center">
                 <svg className="w-16 h-16 mx-auto text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    {/* --- [FIXED] Changed icon to a failure 'X' --- */}
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <h1 className="text-3xl sm:text-4xl text-red-600 font-bold mt-4">Payment Failed!</h1>
                 <p className="text-base sm:text-lg text-gray-600 my-4">
@@ -63,7 +92,7 @@ const PaySuccess = () => {
                     className="py-2 px-6 text-base text-white bg-indigo-600 rounded-lg cursor-pointer hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-colors"
                     onClick={handleBackToHome}
                 >
-                    Back to Rooms
+                    Back to Home
                 </button>
 
                
@@ -72,4 +101,4 @@ const PaySuccess = () => {
     );
 };
 
-export default PaySuccess;
+export default PayFailure;

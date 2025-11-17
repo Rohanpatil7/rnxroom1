@@ -1,5 +1,6 @@
+// src/components/Costcard.jsx
+
 import React from 'react';
-import { NavLink } from 'react-router-dom';
 
 const formatDate = (date) => {
   if (!date) return 'Select Date';
@@ -19,37 +20,75 @@ const formatCurrency = (amount) => {
   }).format(amount || 0);
 };
 
-function Costcard({ bookingDetails, hotelData, taxData }) {
+function Costcard({
+  bookingDetails,
+  hotelData,
+  taxData,
+  // overrides coming from Booking.jsx
+  serviceFee: serviceFeeProp,
+  grandTotal: grandTotalProp,
+  extraAdultCost: extraAdultCostProp,
+  extraChildCost: extraChildCostProp,
+}) {
+  console.log('=== Costcard render ===');
+  console.log('bookingDetails:', bookingDetails);
+  console.log('serviceFeeProp:', serviceFeeProp);
+  console.log('grandTotalProp:', grandTotalProp);
+  console.log('extraAdultCostProp:', extraAdultCostProp);
+  console.log('extraChildCostProp:', extraChildCostProp);
+
   if (!bookingDetails) return null;
 
   const {
     rooms = [],
     dates = {},
     totalPrice = 0,
-    extraAdultCost = 0,
-    extraChildCost = 0,
+    // values stored inside bookingDetails (fallbacks)
+    extraAdultCost: extraAdultCostFromDetails = 0,
+    extraChildCost: extraChildCostFromDetails = 0,
   } = bookingDetails;
 
   const { checkIn, checkOut, nights = 0 } = dates;
   const totalRooms = rooms.reduce((sum, item) => sum + item.quantity, 0);
 
-  const serviceFee = hotelData?.ServiceCharges;
+  // ✅ use props if provided, else fall back to bookingDetails values
+  const extraAdultCost =
+    extraAdultCostProp ?? extraAdultCostFromDetails ?? 0;
+  const extraChildCost =
+    extraChildCostProp ?? extraChildCostFromDetails ?? 0;
+
+  const serviceFee =
+    serviceFeeProp ??
+    hotelData?.ServiceCharges ??
+    hotelData?.serviceFee ??
+    0;
+
   const taxableAmount = totalPrice + extraAdultCost + extraChildCost;
 
   const totalGstAmount =
     taxData?.taxes?.reduce(
-      (sum, tax) => sum + taxableAmount * (parseFloat(tax.Percentage) / 100),
+      (sum, tax) =>
+        sum + taxableAmount * (parseFloat(tax.Percentage) / 100),
       0
     ) || taxableAmount * 0.18;
 
-  const grandTotal = taxableAmount + totalGstAmount + serviceFee;
+  const grandTotal =
+    grandTotalProp ??
+    (taxableAmount + totalGstAmount + serviceFee);
+
+  console.log('Computed extraAdultCost:', extraAdultCost);
+  console.log('Computed extraChildCost:', extraChildCost);
+  console.log('Computed serviceFee:', serviceFee);
+  console.log('Computed grandTotal:', grandTotal);
 
   const hotelImage = hotelData?.HotelImages?.[0];
 
   return (
     <div className="max-w-screen rounded-xl md:w-full bg-white font-sans shadow-lg overflow-hidden mb-12 ">
       {/* Hotel Image */}
-      <img className="w-full h-48 object-cover" src={hotelImage} alt="Hotel" />
+      {hotelImage && (
+        <img className="w-full h-48 object-cover" src={hotelImage} alt="Hotel" />
+      )}
 
       <div className="p-4">
         <div>
@@ -60,15 +99,6 @@ function Costcard({ bookingDetails, hotelData, taxData }) {
           <p className="mt-3 text-sm font-medium text-gray-800">
             {formatDate(checkIn)} ----- {nights} Night{nights !== 1 ? 's' : ''} ----- {formatDate(checkOut)}
           </p>
-
-          {/* Use NavLink so Router handles the transition */}
-          <NavLink
-            to="/allrooms"
-            state={{ from: 'booking', editMode: true }}
-            className="mt-2 inline-block cursor-pointer text-xs font-medium text-indigo-400 hover:text-indigo-500"
-          >
-            &larr; Edit Stay Details
-          </NavLink>
         </div>
 
         <hr className="my-2" />
@@ -105,7 +135,9 @@ function Costcard({ bookingDetails, hotelData, taxData }) {
             {extraAdultCost > 0 && (
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-600">Extra Adult Cost</p>
-                <p className="font-medium text-gray-800">{formatCurrency(extraAdultCost)}</p>
+                <p className="font-medium text-gray-800">
+                  {formatCurrency(extraAdultCost)}
+                </p>
               </div>
             )}
 
@@ -128,7 +160,9 @@ function Costcard({ bookingDetails, hotelData, taxData }) {
                   {tax.TaxGroupName} ({parseFloat(tax.Percentage)}%)
                 </p>
                 <p className="font-medium text-gray-800">
-                  {formatCurrency(taxableAmount * (parseFloat(tax.Percentage) / 100))}
+                  {formatCurrency(
+                    taxableAmount * (parseFloat(tax.Percentage) / 100)
+                  )}
                 </p>
               </div>
             ))}

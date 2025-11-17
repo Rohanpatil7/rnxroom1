@@ -21,7 +21,7 @@ const BookingCart = ({ cart, bookingDetails, onRemove, onAdd, totalPrice, onBook
                 quantity: item.quantity,
                 pricePerNight: item.room.pricePerNight,
                 room: {
-                    maxOccupancy: item.room.maxCapacity || 4
+                    maxOccupancy: item.room.maxCapacity
                 }
             })),
             dates: {

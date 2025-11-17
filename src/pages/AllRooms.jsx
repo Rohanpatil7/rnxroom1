@@ -11,7 +11,10 @@ import { useHotelParam } from '../utils/useHotelParam'; // ✅
 import {BallTriangle} from "react-loader-spinner";
 
 const BOOKING_CART_KEY = 'bookingCart';
-const BOOKING_DETAILS_KEY = 'bookingDetails';
+// --- [FIX 1] ---
+// This key MUST match the key used in Booking.jsx
+const BOOKING_DETAILS_KEY = 'currentBookingDetails';
+// --- [END FIX 1] ---
 
 
 // Helpers (formatDateForApi, getRateForOccupancy... same as before)
@@ -117,17 +120,20 @@ function AllRooms() {
         };
     }
 
-    // Priority 3: Session Storage
+    // Priority 3: Session Storage (using the *correct* key)
     const savedDetails = sessionStorage.getItem(BOOKING_DETAILS_KEY);
     if (savedDetails) {
         try {
             const parsed = JSON.parse(savedDetails);
-            // Merge with defaults to ensure all keys exist
+            // We only need the date/guest part for *this* page's state
+            // This is safe because Booking.jsx saves the full object
             return {
                 ...defaultDetails,
-                ...parsed,
-                checkIn: parsed.checkIn ? new Date(parsed.checkIn) : defaultDetails.checkIn,
-                checkOut: parsed.checkOut ? new Date(parsed.checkOut) : defaultDetails.checkOut,
+                checkIn: parsed.dates?.checkIn ? new Date(parsed.dates.checkIn) : defaultDetails.checkIn,
+                checkOut: parsed.dates?.checkOut ? new Date(parsed.dates.checkOut) : defaultDetails.checkOut,
+                nights: parsed.dates?.nights || 1,
+                adults: parsed.guests?.adults || 1,
+                children: parsed.guests?.children || 0,
             };
         } catch (e) {
             console.error('Could not parse booking details', e);
@@ -156,10 +162,11 @@ function AllRooms() {
   });
 
   useEffect(() => {
-    // This effect still saves the "confirmed" details
-    sessionStorage.setItem(BOOKING_DETAILS_KEY, JSON.stringify(bookingDetails));
+    // This effect now saves the *cart*, not the booking details,
+    // as booking details are saved on proceeding.
     sessionStorage.setItem(BOOKING_CART_KEY, JSON.stringify(cart));
-  }, [bookingDetails, cart]);
+  }, [cart]);
+
 
   useEffect(() => {
     // This effect still uses the 'isCancelled' flag for robustness
@@ -309,13 +316,10 @@ function AllRooms() {
       return;
     }
 
-    // --- [START OF FIX] ---
-    // The logic to find `originalRoom` was removed.
-    // All data is now sourced directly from `item.room` which is in the cart.
+    // --- (This logic remains the same) ---
     const bookingDataForState = {
       rooms: cart.map((item) => {
         
-        // Find the selected meal plan from the room object in the cart
         const mealPlanNameMatch = item.room.title.match(/\(([^)]+)\)/);
         const selectedMealPlanName = mealPlanNameMatch ? mealPlanNameMatch[1] : null;
         const selectedMealPlan = item.room.mealPlans.find((mp) => mp.MealPlan === selectedMealPlanName);
@@ -327,7 +331,6 @@ function AllRooms() {
           quantity: item.quantity,
           pricePerNight: item.room.pricePerNight,
           room: {
-            // All data now comes directly from `item.room`
             maxOccupancy: item.room.maxCapacity,
             maxCapacityAdult: item.room.maxCapacityAdult,
             maxCapacityChild: item.room.maxCapacityChild,
@@ -337,8 +340,8 @@ function AllRooms() {
           },
           selectedMealPlan,
         };
-      }).filter(Boolean), // .filter(Boolean) safely removes any nulls if mapping failed
-      // --- [END OF FIX] ---
+      }).filter(Boolean),
+      // --- (End of this logic) ---
       
       dates: {
         checkIn: bookingDetails.checkIn,
@@ -358,7 +361,12 @@ function AllRooms() {
         return;
     }
 
-    sessionStorage.setItem(BOOKING_DETAILS_KEY, JSON.stringify(bookingDetails));
+    // --- [FIX 2] ---
+    // Save the FULL booking data object (bookingDataForState) to session storage,
+    // using the CORRECT key.
+    sessionStorage.setItem(BOOKING_DETAILS_KEY, JSON.stringify(bookingDataForState));
+    // --- [END FIX 2] ---
+
     sessionStorage.setItem(BOOKING_CART_KEY, JSON.stringify(cart));
 
     navigate('/booking/new', {

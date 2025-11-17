@@ -1,3 +1,6 @@
+// src/pages/Home.jsx
+// --- [START OF FINAL FIX] ---
+
 import React, { useState, useEffect, useCallback } from "react";
 import DatePricePicker from "../components/DatePricePicker.jsx";
 import { NavLink } from "react-router-dom";
@@ -18,8 +21,8 @@ const PLACEHOLDER_ICON =
   "data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2220%22%20height%3D%2220%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20rx%3D%224%22%20fill%3D%22%23e5e7eb%22/%3E%3Cpath%20d%3D%22M4%2010h12%22%20stroke%3D%22%236b7280%22%20stroke-width%3D%222%22/%3E%3Cpath%20d%3D%22M10%204v12%22%20stroke%3D%22%239ca3af%22%20stroke-width%3D%222%22/%3E%3C/svg%3E";
 
 
-// --- MODIFICATION: Added helpers & key for sessionStorage ---
-const BOOKING_DETAILS_KEY = 'bookingDetails';
+// --- MODIFICATION 1: Use the CORRECT key to match other components ---
+const BOOKING_DETAILS_KEY = 'currentBookingDetails';
 
 const getTomorrow = () => {
   const today = new Date();
@@ -35,13 +38,12 @@ const getDayAfterTomorrow = () => {
   dayAfter.setDate(dayAfter.getDate() + 1);
   return dayAfter;
 };
-// --- END OF MODIFICATION ---
 
 
 function Home({ hotelData, isBookingDisabled }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   
-  // --- MODIFICATION: Updated state to use sessionStorage AND URL Params ---
+  // --- MODIFICATION 2: Replaced initializer with the "read-safe" version ---
   const [bookingDetails, setBookingDetails] = useState(() => {
     // 1. Check for URL Parameters (Priority 1)
     const params = new URLSearchParams(window.location.search);
@@ -51,17 +53,17 @@ function Home({ hotelData, isBookingDisabled }) {
     const urlChildren = parseInt(params.get('children'), 10);
 
     if (urlCheckIn && urlCheckOut && new Date(urlCheckIn) > new Date()) {
-      const checkIn = new Date(urlCheckIn);
-      const checkOut = new Date(urlCheckOut);
-      const nights = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-      
-      return {
-        checkIn,
-        checkOut,
-        nights,
-        adults: urlAdults || 1,
-        children: urlChildren || 0,
-      };
+        const checkIn = new Date(urlCheckIn);
+        const checkOut = new Date(urlCheckOut);
+        const nights = Math.round((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
+        
+        return {
+            checkIn,
+            checkOut,
+            nights,
+            adults: urlAdults || 1,
+            children: urlChildren || 0,
+        };
     }
 
     // 2. Define Defaults
@@ -74,26 +76,32 @@ function Home({ hotelData, isBookingDisabled }) {
     };
 
     // 3. Check Session Storage (Priority 2)
+    // This logic correctly parses the complex object from AllRooms/Booking
     const savedDetails = sessionStorage.getItem(BOOKING_DETAILS_KEY);
     if (savedDetails) {
-      try {
-        const parsed = JSON.parse(savedDetails);
-        // IMPORTANT: Convert date strings from JSON back to Date objects
-        return {
-          ...defaultDetails,
-          ...parsed,
-          checkIn: parsed.checkIn ? new Date(parsed.checkIn) : defaultDetails.checkIn,
-          checkOut: parsed.checkOut ? new Date(parsed.checkOut) : defaultDetails.checkOut,
-        };
-      } catch (e) {
-        console.error("Failed to parse booking details from storage", e);
-      }
+        try {
+            const parsed = JSON.parse(savedDetails);
+            
+            // This safely extracts data from the complex object
+            // without corrupting the Home.jsx simple state.
+            return {
+                ...defaultDetails,
+                checkIn: parsed.dates?.checkIn ? new Date(parsed.dates.checkIn) : defaultDetails.checkIn,
+                checkOut: parsed.dates?.checkOut ? new Date(parsed.dates.checkOut) : defaultDetails.checkOut,
+                nights: parsed.dates?.nights || 1,
+                adults: parsed.guests?.adults || 1,
+                children: parsed.guests?.children || 0,
+            };
+        } catch (e) {
+            console.error('Could not parse booking details', e);
+            // Fall through to defaults
+        }
     }
-    
+
     // 4. Return defaults if nothing is saved
     return defaultDetails;
   });
-  // --- END OF MODIFICATION ---
+  // --- END OF MODIFICATION 2 ---
 
   
   const hasImages = hotelData?.HotelImages && hotelData.HotelImages.length > 0;
@@ -122,12 +130,9 @@ function Home({ hotelData, isBookingDisabled }) {
     img.src = fallbackSrc;
   };
 
-  // --- MODIFICATION: Added useEffect to save state ---
-  // This saves any date changes back to storage
-  useEffect(() => {
-    sessionStorage.setItem(BOOKING_DETAILS_KEY, JSON.stringify(bookingDetails));
-  }, [bookingDetails]);
-  // --- END OF MODIFICATION ---
+  // --- MODIFICATION 3: The useEffect that wrote to sessionStorage is REMOVED ---
+  // This hook is no longer here, which stops the pollution.
+  // --- END OF MODIFICATION 3 ---
 
   // Effect for auto-sliding every 5 seconds
   useEffect(() => {
@@ -313,3 +318,5 @@ function Home({ hotelData, isBookingDisabled }) {
 }
 
 export default Home;
+
+// --- [END OF FINAL FIX] ---

@@ -1,6 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+// --- [NEW] Define all keys to be cleared ---
+const BOOKING_DETAILS_KEY = 'currentBookingDetails';
+const TEMP_GUEST_COUNTS_KEY = 'tempGuestCounts';
+const TEMP_CHILDREN_AGES_KEY = 'tempChildrenAges';
+const BOOKING_CART_KEY = 'bookingCart';
+const TEMP_CONTACT_KEY = 'tempContactDetails';
+const TEMP_GUESTS_KEY = 'tempAdditionalGuests';
+const TEMP_SHOW_GST_KEY = 'tempShowGst';
+const TEMP_GST_DETAILS_KEY = 'tempGstDetails';
+const BOOKING_STEP_KEY = 'tempBookingStep';
+// --- [END NEW] ---
+
 const PaySuccess = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -11,10 +23,25 @@ const PaySuccess = () => {
         if (Object.keys(details).length > 0) {
             setPaymentDetails(details);
         }
+        
+        // --- [NEW] Clear all booking-related session storage ---
+        // This is the crucial fix
+        sessionStorage.removeItem(BOOKING_DETAILS_KEY);
+        sessionStorage.removeItem(TEMP_GUEST_COUNTS_KEY);
+        sessionStorage.removeItem(TEMP_CHILDREN_AGES_KEY);
+        sessionStorage.removeItem(BOOKING_CART_KEY);
+        sessionStorage.removeItem(TEMP_CONTACT_KEY);
+        sessionStorage.removeItem(TEMP_GUESTS_KEY);
+        sessionStorage.removeItem(TEMP_SHOW_GST_KEY);
+        sessionStorage.removeItem(TEMP_GST_DETAILS_KEY);
+        sessionStorage.removeItem(BOOKING_STEP_KEY);
+        // --- [END NEW] ---
+
     }, [searchParams]);
 
     const handleBackToHome = () => {
-        navigate('/allrooms');
+        // --- [MODIFIED] Navigate directly to 'home' ---
+        navigate('*');
     };
 
     const tableRows = paymentDetails ? [
@@ -63,7 +90,7 @@ const PaySuccess = () => {
                     className="py-2 px-6 text-base text-white bg-indigo-600 rounded-lg cursor-pointer hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-colors"
                     onClick={handleBackToHome}
                 >
-                    Back to Rooms
+                    Back to Home
                 </button>
 
                
@@ -73,3 +100,12 @@ const PaySuccess = () => {
 };
 
 export default PaySuccess;
+
+
+
+
+
+
+
+
+

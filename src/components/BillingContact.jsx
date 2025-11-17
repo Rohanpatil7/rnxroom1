@@ -1,16 +1,22 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+// 1. REMOVE THE useHotelParam HOOK. We will get the param manually.
+// import { useHotelParam } from "../utils/useHotelParam"; 
 
 // --- [NEW] Session storage keys for draft data ---
 const TEMP_CONTACT_KEY = 'tempContactDetails';
 const TEMP_GUESTS_KEY = 'tempAdditionalGuests';
 const TEMP_SHOW_GST_KEY = 'tempShowGst';
 const TEMP_GST_DETAILS_KEY = 'tempGstDetails';
-const BOOKING_STEP_KEY = 'tempBookingStep'; // <-- this key remember the step 
+const BOOKING_STEP_KEY = 'tempBookingStep'; 
 
 // Receive totalGuests prop
 export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
+  
+  // 2. REMOVE THE HOOK FROM HERE
+  // const hotelParam = useHotelParam(); 
+
   // --- [UPDATED] State now loads from session storage ---
   const [contactDetails, setContactDetails] = useState(() => {
     try {
@@ -73,7 +79,7 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // --- [NEW] useEffects to save draft state to session storage on change ---
+  // --- useEffects to save draft state (no changes) ---
   useEffect(() => {
     sessionStorage.setItem(TEMP_CONTACT_KEY, JSON.stringify(contactDetails));
   }, [contactDetails]);
@@ -91,13 +97,12 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
   }, [gstDetails]);
   // --- [END NEW] ---
 
-  // --- Validation Function (Updated) ---
+  // --- Validation Function (no changes) ---
   const validate = () => {
     const newErrors = {};
     const { firstName, lastName, email, phone } = contactDetails;
     const { registrationNumber, companyName, companyAddress } = gstDetails;
 
-    // Validate Primary Contact
     if (!firstName.trim()) newErrors.firstName = "First Name is required.";
     if (!lastName.trim()) newErrors.lastName = "Last Name is required.";
     if (!email) newErrors.email = "Email address is required.";
@@ -107,19 +112,13 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
     else if (!/^\d{10}$/.test(phone))
       newErrors.phone = "Phone number must be exactly 10 digits.";
 
-    // Validate GST (if shown)
     if (showGst) {
-      // [NEW] GST Validation Logic
-      // Standard 15-character GSTIN format
       const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
       if (!registrationNumber.trim()) {
         newErrors.registrationNumber = "Registration No. is required.";
       } else if (!gstRegex.test(registrationNumber.trim())) {
-        // We trim() but no need for toUpperCase() as handleGstChange does it
         newErrors.registrationNumber = "Please enter a valid 15-character GSTIN.";
       }
-      // [END NEW]
-
       if (!companyName.trim())
         newErrors.companyName = "Company Name is required.";
       if (!companyAddress.trim())
@@ -127,12 +126,10 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
     }
 
     setErrors(newErrors);
-
-    // Return true if primary contact errors are empty
     return Object.keys(newErrors).length === 0;
   };
 
-  // --- Handlers for Primary Contact ---
+  // --- Handlers for Primary Contact (no changes) ---
   const handleChange = (e) => {
     const { id, value } = e.target;
     let processedValue = value;
@@ -151,19 +148,17 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
     }
   };
 
-  // --- Handler for GST [UPDATED] ---
+  // --- Handler for GST (no changes) ---
   const handleGstChange = (e) => {
     const { id, value } = e.target;
     
     let processedValue = value;
-    // [NEW] Convert GST number to uppercase as user types
     if (id === "registrationNumber") {
       processedValue = value.toUpperCase();
     }
 
     setGstDetails((prevDetails) => ({
       ...prevDetails,
-      // [UPDATED] Use processedValue
       [id]: processedValue, 
     }));
 
@@ -172,11 +167,11 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
     }
   };
 
-  // --- Handlers for Additional Guests ---
+  // --- Handlers for Additional Guests (no changes) ---
   const handleAddGuest = () => {
-    const currentGuestFormCount = 1 + additionalGuests.length; // 1 for primary
+    const currentGuestFormCount = 1 + additionalGuests.length;
     if (totalGuests > 0 && currentGuestFormCount >= totalGuests) {
-      return; // Just stop adding, no error
+      return; 
     }
     const newGuest = { id: Date.now(), firstName: "", lastName: "" };
     setAdditionalGuests((prevGuests) => [...prevGuests, newGuest]);
@@ -199,6 +194,16 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
   // --- Payment Function (Easebuzz integration) ---
   const startPayment = async () => {
     setLoading(true);
+
+    // 3. GET THE PARAMETER DIRECTLY FROM LOCALSTORAGE
+    const hotelParam = localStorage.getItem("hotelParam");
+
+    // 4. ADD A CHECK
+    if (!hotelParam) {
+      alert("Error: Hotel parameter is missing. Please refresh the page and try again.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const rawAmount =
@@ -225,6 +230,10 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
         email: contactDetails.email,
         phone: contactDetails.phone,
         productinfo: "Hotel Booking",
+        
+        // 5. SEND THE CORRECTLY GOTTEN PARAMETER
+        udf1: hotelParam, 
+
         ...(showGst && {
           gst_number: gstDetails.registrationNumber,
           gst_company_name: gstDetails.companyName,
@@ -243,13 +252,11 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
       if (resp?.data?.status === 1 && resp?.data?.data) {
         const access_key = resp.data.data;
 
-        // [NEW] Clear draft data from session storage on success
         sessionStorage.removeItem(TEMP_CONTACT_KEY);
         sessionStorage.removeItem(TEMP_GUESTS_KEY);
         sessionStorage.removeItem(TEMP_SHOW_GST_KEY);
         sessionStorage.removeItem(TEMP_GST_DETAILS_KEY);
-        sessionStorage.removeItem(BOOKING_STEP_KEY); // <-- this key remember the step that already saved into sessionStorage and now remove it
-        // [END NEW]
+        sessionStorage.removeItem(BOOKING_STEP_KEY); 
 
         const paymentURL = `https://pay.easebuzz.in/pay/${access_key}`;
         window.location.href = paymentURL;
@@ -259,16 +266,16 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
       }
     } catch (err) {
       console.error("Payment initiation failed:", err);
-      console.log("Error initiating payment: " + err.message);
+      alert("Error initiating payment: " + err.message);
       setLoading(false);
     }
   };
 
-  // --- Click handler for payment button ---
+  // --- Click handler for payment button (no changes) ---
   const handlePaymentClick = () => {
-    const isValid = validate(); // Run validation for primary guest
+    const isValid = validate(); 
     if (!isValid) {
-      return; // Stop if validation fails
+      return; 
     }
     setErrors({});
     console.log("Proceeding to payment with:", {
@@ -280,9 +287,9 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
     startPayment();
   };
 
-  // --- Helper for input styling ---
+  // --- Helper for input styling (no changes) ---
   const inputBaseClass =
-    "mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none sm:text-sm ";
+    "mt-1 block w-full px-1 py-2 border rounded-md shadow-sm focus:outline-none sm:text-sm ";
   const errorClass =
     "border-red-500 focus:ring-red-500 focus:border-red-500";
   const validClass =
@@ -292,8 +299,6 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
 
   const labelClassName = "block text-sm font-medium text-gray-700 mb-1 ";
 
-  // Logic to disable the 'Add Guest' button
-  // If totalGuests is 0 (not passed), allow adding guests. Otherwise, limit to the total.
   const canAddMoreGuests = totalGuests > 0 ? (1 + additionalGuests.length) < totalGuests : true;
 
 
@@ -372,19 +377,17 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
               className={inputClassName("email", errors.email)}
               placeholder="you@example.com"
             />
-            {/* <p className="mt-1 text-xs text-gray-500">
-              Booking voucher will be sent to this email ID
-            </p> */}
             {errors.email && (
               <p className="mt-1 text-sm text-red-600">{errors.email}</p>
             )}
           </div>
+
           <div>
             <label htmlFor="phone" className={labelClassName}>
               Mobile Number
             </label>
-            <div className="flex ">
-              <span className="inline-flex items-center px-2 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
+            <div className="relative w-full">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-700 text-sm">
                 +91
               </span>
               <input
@@ -393,14 +396,12 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
                 value={contactDetails.phone}
                 onChange={handleChange}
                 maxLength={10}
-                className={`${inputBaseClass} rounded-l-none  ${
-                  errors.phone ? errorClass : validClass
-                }`}
+                className={`${inputBaseClass} w-full pl-12 pr-3 py-2 border border-gray-300 rounded-md text-gray-700 placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500`}
                 placeholder="9876543210"
               />
             </div>
             {errors.phone && (
-              <p className=" text-sm text-red-600">{errors.phone}</p>
+              <p className="text-sm text-red-600 mt-1">{errors.phone}</p>
             )}
           </div>
         </div>
@@ -431,7 +432,7 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
                   htmlFor="registrationNumber"
                   className={labelClassName}
                 >
-                  Registration Number
+                  GST Number
                 </label>
                 <input
                   type="text"
@@ -443,7 +444,7 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
                     "registrationNumber",
                     errors.registrationNumber
                   )}
-                  placeholder="Enter Registration No."
+                  placeholder="Enter GST Number"
                 />
                 {errors.registrationNumber && (
                   <p className="mt-1 text-sm text-red-600">
@@ -581,20 +582,6 @@ export default function BillingContact({ hotelData, grandTotal, totalGuests }) {
           + Add Guest
         </button>
       </div>
-
-
-      {/* --- Login Bar --- */}
-      {/* <div className="mt-6 p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-        <p className="text-sm text-gray-700">
-          Login to prefill traveller details and get access to secret deals
-        </p>
-        <button
-          type="button"
-          className="px-5 py-2 border border-blue-600 text-blue-600 text-sm font-bold rounded-md hover:bg-blue-50"
-        >
-          LOGIN
-        </button>
-      </div> */}
 
       {/* --- Payment Button (from original file) --- */}
       <div className="fixed bottom-0 left-0 w-full bg-white p-2 shadow-[0_-2px_6px_rgba(0,0,0,0.1)] md:static md:w-auto md:bg-transparent md:p-0 md:shadow-none md:pt-6 ">

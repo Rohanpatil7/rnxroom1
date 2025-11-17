@@ -72,7 +72,7 @@ function App() {
             
             // ✅ Clear localStorage if API says invalid
             if (data.result[0].Error.includes("Truble to find hotel")) {
-              localStorage.removeItem("hotelParam");
+              // localStorage.removeItem("hotelParam");
             }
           } else {
             setHotelData(data.result[0]);
