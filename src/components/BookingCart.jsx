@@ -17,6 +17,8 @@ const BookingCart = ({ cart, bookingDetails, onRemove, onAdd, totalPrice, onBook
         const currentBookingDetails = {
             rooms: cart.map(item => ({
                 roomId: item.room._id.split('-')[0],
+                roomTypeId: item.room.RoomTypeID, // Critical for API
+                mealPlanId: item.mealOption?.MealPlanID, // Critical for API
                 title: item.room.title,
                 quantity: item.quantity,
                 pricePerNight: item.room.pricePerNight,

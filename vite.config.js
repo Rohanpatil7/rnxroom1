@@ -1,5 +1,3 @@
-// vite.config.js
-
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import basicSsl from "@vitejs/plugin-basic-ssl";
@@ -10,35 +8,39 @@ export default ({ mode }) => {
   const env = loadEnv(mode, ".", "");
   const isDev = mode === "development";
 
-  const BASE_PATH = isDev ? '/' : '/booking/';
+  const BASE_PATH = isDev ? "/" : "/booking/";
 
   // ✅ Proxy configuration for local development only
   const proxyConfig = {
-    '/initiate-payment': {
-      target: 'http://localhost:5000',
+    // ---------------- EXISTING PROXIES (UNCHANGED) ----------------
+    "/initiate-payment": {
+      target: "http://localhost:5000",
       changeOrigin: true,
       secure: false,
     },
 
-    '/booking/api': {
-      target: env.VITE_API_URL || 'https://membership.xpresshotelpos.com/',
+    "/booking/api": {
+      target: env.VITE_API_URL || "https://membership.xpresshotelpos.com/",
       changeOrigin: true,
       secure: true,
-      rewrite: (path) => path.replace(/^\/api/, '/booking/api'),
+      rewrite: (path) => path.replace(/^\/booking\/api/, "/booking/api"),
+
     },
 
-    // ✅ Added Option 2 proxy for Easebuzz PHP backend
-    '/pg_demo': {
-      target: 'https://membership.xpresshotelpos.com/',
+    "/pg_demo": {
+      target: "https://membership.xpresshotelpos.com/",
       changeOrigin: true,
       secure: true,
-      rewrite: (path) => path.replace(/^\/pg_demo/, '/pg_demo'),
+      rewrite: (path) => path.replace(/^\/pg_demo/, "/pg_demo"),
     },
+
+    
   };
 
   return defineConfig({
     plugins: [react(), basicSsl(), tailwind()],
     base: BASE_PATH,
+
     server: {
       host: true,
       https: true,
@@ -46,18 +48,16 @@ export default ({ mode }) => {
       strictPort: false,
       proxy: isDev ? proxyConfig : undefined,
     },
+
     build: {
       outDir: "dist",
       sourcemap: isDev,
     },
+
     define: {
       _API_BASE_: JSON.stringify(BASE_PATH),
-      _BACKEND_URL_: JSON.stringify(
-        env.VITE_API_URL || ""
-      ),
-      _ENCODED_STRING_: JSON.stringify(
-        env.VITE_ENCODED_STRING || ""
-      ),
+      _BACKEND_URL_: JSON.stringify(env.VITE_API_URL || ""),
+      _ENCODED_STRING_: JSON.stringify(env.VITE_ENCODED_STRING || ""),
     },
   });
 };

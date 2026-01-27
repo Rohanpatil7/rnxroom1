@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+// 1. Import useLocation
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
 import Home from "./pages/Home.jsx";
 import AllRooms from "./pages/AllRooms.jsx";
@@ -7,14 +8,38 @@ import Booking from "./pages/Booking.jsx";
 import { getHotelDetails } from "./api/api_services.js";
 import PaySuccess from "./pages/Paysuccess.jsx";
 import PayFailure from "./pages/Payfailure.jsx";
-import {BallTriangle} from "react-loader-spinner";
+import { BallTriangle } from "react-loader-spinner";
+
+import AdminLayout from './admin/components/AdminLayout';
+import Dashboard from './admin/pages/Dashboard';
+import Login from './admin/pages/Login';
+import Bookings from './admin/pages/Bookings';
+import Rooms from './admin/pages/Rooms';
+import RepeatGuests from './admin/pages/RepeatGuests';
+import RoomCategoryReport from './admin/pages/RoomCategoryReport';
+import GuestWiseBookings from './admin/pages/GuestWiseBookings';
+import SummaryReport from './admin/pages/SummaryReport.jsx';
+
+// 2. Protected Admin Route Component
+
+const ProtectedAdminRoute = ({ children }) => {
+    const isAuthenticated = sessionStorage.getItem("adminToken");
+    return isAuthenticated ? children : <Navigate to="/admin/login" replace />;
+};
 
 function App() {
   const [hotelData, setHotelData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-   const getQueryParam = (name) => {
+  // 2. Get the location object from React Router
+  const location = useLocation();
+
+  // 3. Update isAdmin logic to use location.pathname
+  // This correctly ignores the '/booking/' base path
+  const isAdmin = location.pathname.startsWith('/admin');
+
+  const getQueryParam = (name) => {
     let query = window.location.search;
     if (!query && window.location.hash.includes("?")) {
       query = window.location.hash.split("?")[1];
@@ -23,31 +48,17 @@ function App() {
     return params.get(name);
   };
 
-  // ✅ Get URL parameter (already decoded by URLSearchParams)
   const urlParam = getQueryParam("parameter");
-  
-  // ✅ Get stored parameter
   const storedParam = localStorage.getItem("hotelParam");
-  
-  // ✅ Use URL param if available, otherwise stored
   const hotelParam = urlParam || storedParam;
 
-   // ✅ Save to localStorage immediately if URL param exists
   if (urlParam && urlParam !== storedParam) {
     localStorage.setItem("hotelParam", urlParam);
-    console.log("✅ Saved parameter to localStorage:", urlParam);
   }
 
-
-  console.log("🔍 Debug Info:", {
-    urlParam,
-    storedParam,
-    hotelParam,
-    urlLength: urlParam?.length,
-    storedLength: storedParam?.length
-  });
-
   useEffect(() => {
+    if (isAdmin) return;
+
     const fetchHotelData = async () => {
       if (!hotelParam) {
         setError("Trouble to find hotel.");
@@ -56,24 +67,15 @@ function App() {
 
       try {
         setLoading(true);
-
-        // ✅ Save DECODED parameter from URL
         if (urlParam) {
           localStorage.setItem("hotelParam", urlParam);
-          console.log("✅ Saved to localStorage:", urlParam);
         }
 
-        // ✅ Use parameter directly (already decoded by URLSearchParams)
         const data = await getHotelDetails(hotelParam);
 
         if (data?.result?.[0]) {
           if (data.result[0].Error) {
             setError(` ${data.result[0].Error}`);
-            
-            // ✅ Clear localStorage if API says invalid
-            if (data.result[0].Error.includes("Truble to find hotel")) {
-              // localStorage.removeItem("hotelParam");
-            }
           } else {
             setHotelData(data.result[0]);
             setError(null);
@@ -90,28 +92,17 @@ function App() {
     };
 
     fetchHotelData();
-  }, [hotelParam, urlParam]);
+  }, [hotelParam, urlParam, isAdmin]);
 
-  // ✅ Loading UI
-  if (loading) {
+  if (loading && !isAdmin) {
     return (
       <div className="flex items-center justify-center h-screen text-xl font-semibold">
-        <BallTriangle
-      height={100}
-      width={100}
-      radius={5}
-      color="#3d52f2"
-      ariaLabel="ball-triangle-loading"
-      wrapperStyle={{}}
-      wrapperClass=""
-      visible={true}
-/>
+        <BallTriangle height={100} width={100} radius={5} color="#3d52f2" visible={true} />
       </div>
     );
   }
 
-  // ✅ Error UI
-  if (error) {
+  if (error && !isAdmin) {
     return (
       <div className="flex items-center justify-center h-screen text-xl font-semibold text-red-600">
         Error: {error}
@@ -119,8 +110,7 @@ function App() {
     );
   }
 
-  // ✅ Initial (no data) UI
-  if (!hotelData) {
+  if (!hotelData && !isAdmin) {
     return (
       <div className="flex items-center justify-center h-screen text-xl font-semibold">
         Please provide a hotel parameter in the URL.
@@ -130,22 +120,35 @@ function App() {
 
   return (
     <div className="bg-gray-50">
-      <Navbar hotelData={hotelData} />
+      {/* 4. Update the Navbar condition to use location.pathname */}
+      {!location.pathname.startsWith('/admin') && <Navbar hotelData={hotelData} />}
+      
       <div className="h-fit relative">
-        <Routes >
-          {/* Redirect all unknown routes to home */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-          <Route path="/" element={<Home hotelData={hotelData} />} />
-          <Route
-            path="/allrooms"
-            element={<AllRooms hotelData={hotelData} room />}
-          />
-          <Route
-            path="/booking/new"
-            element={<Booking hotelData={hotelData} />}
-          />
-          <Route path="/payment-success" element={<PaySuccess />} />
-          <Route path="/payment-failure" element={<PayFailure />} />
+        <Routes>
+            <Route path="/" element={<Home hotelData={hotelData} />} />
+            <Route path="/allrooms" element={<AllRooms hotelData={hotelData} room />} />
+            <Route path="/booking/new" element={<Booking hotelData={hotelData} />} />
+            <Route path="/payment-success" element={<PaySuccess hotelData={hotelData}/>} />
+            <Route path="/payment-failure" element={<PayFailure />} />
+
+            <Route path="/admin/login" element={<Login />} />
+            
+            <Route path="/admin" element={
+                <ProtectedAdminRoute>
+                    <AdminLayout />
+                </ProtectedAdminRoute>
+            }>
+                <Route index element={<Navigate to="dashboard" />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="bookings" element={<Bookings />} /> 
+                <Route path="rooms" element={<Rooms />} />
+                <Route path="guests" element={<RepeatGuests />} />
+                <Route path="reports/room-category" element={<RoomCategoryReport />} />
+                <Route path="reports/guest-wise" element={<GuestWiseBookings />} />
+                <Route path="reports/summary" element={<SummaryReport />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </div>

@@ -4,6 +4,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import DatePricePicker from "../components/DatePricePicker.jsx";
 import { NavLink } from "react-router-dom";
+import CancelPopup from "../components/Cancelpopup";
+
 
 // Helper SVG components for slider arrows (no changes here)
 const ChevronLeftIcon = (props) => (
@@ -42,7 +44,8 @@ const getDayAfterTomorrow = () => {
 
 function Home({ hotelData, isBookingDisabled }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  
+  const [showCancelPopup, setShowCancelPopup] = useState(false);
+
   // --- MODIFICATION 2: Replaced initializer with the "read-safe" version ---
   const [bookingDetails, setBookingDetails] = useState(() => {
     // 1. Check for URL Parameters (Priority 1)
@@ -266,22 +269,22 @@ function Home({ hotelData, isBookingDisabled }) {
 
         {/* Policies Section */}
         {hotelData?.HotelPolicies && hotelData?.HotelPolicies.length > 0 && (
-  <div className="w-full py-12 px-4 sm:px-8 lg:px-16">
-    <h3 className="text-2xl font-semibold text-center mx-auto mb-4">Hotel Policies</h3>
-    {/* Policies are now in a responsive 2-column grid */}
-    <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-2 text-gray-700">
-      {hotelData?.HotelPolicies.map((policy, index) => (
-        <div key={index} className="flex items-start">
-          {/* Checkmark Icon */}
-          <svg className="w-4 h-4 text-indigo-500 mr-3 mt-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          <span>{policy}</span>
+        <div className="w-full py-12 px-4 sm:px-8 lg:px-16">
+          <h3 className="text-2xl font-semibold text-center mx-auto mb-4">Hotel Policies</h3>
+          {/* Policies are now in a responsive 2-column grid */}
+          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-x-12 gap-y-2 text-gray-700">
+            {hotelData?.HotelPolicies.map((policy, index) => (
+              <div key={index} className="flex items-start">
+                {/* Checkmark Icon */}
+                <svg className="w-4 h-4 text-indigo-500 mr-3 mt-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <span>{policy}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
-    </div>
-  </div>
-)}  
+      )}  
 
         {/* Room Selection */}
         <div className="flex justify-between items-center px-4 sm:px-8 md:px-24 h-20 sticky bottom-0 bg-white shadow-[0_-4px_10px_-5px_rgba(0,0,0,0.1)] gap-4">
@@ -298,6 +301,20 @@ function Home({ hotelData, isBookingDisabled }) {
       )}
       {/* --- MODIFICATION END --- */}</p>
           </div>
+
+          <div className="w-auto hover:scale-110 transition-all">
+            <button
+              onClick={() => setShowCancelPopup(true)}
+              className={`rounded-lg px-6 py-3 text-sm font-medium transition-all
+                ${isBookingDisabled
+                  ? "bg-gray-400 text-white cursor-not-allowed"
+                  : "bg-gradient-to-b from-red-500 via-red-600 to-red-700 text-white hover:shadow-lg"}
+              `}
+              >
+              Cancel Booking
+            </button>
+          </div>
+
           <div className="w-auto hover:scale-110 transition-all">
             <NavLink
               to="/allrooms"
@@ -313,10 +330,14 @@ function Home({ hotelData, isBookingDisabled }) {
           </div>
         </div>
       </div>
+
+      <CancelPopup
+          isOpen={showCancelPopup}
+          onClose={() => setShowCancelPopup(false)}
+      />
     </div>
   );
 }
 
 export default Home;
 
-// --- [END OF FINAL FIX] ---

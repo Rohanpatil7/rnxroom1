@@ -64,7 +64,7 @@ const Navbar = ({hotelData}) => {
         {/* ${isScrolled ? 'text-black' : 'text-white'} */}
       </div>
       <div className="hidden md:flex items-center gap-4 lg:gap-8 ">
-        {navLinks.map((link, i) => (
+        {/* {navLinks.map((link, i) => (
           <a
             key={i}
             href={link.path}
@@ -81,7 +81,7 @@ const Navbar = ({hotelData}) => {
               // }
             />
           </a>
-        ))}
+        ))} */}
         {/* <button
           className={`border px-4 py-1 text-sm font-light rounded-lg scale-120 cursor-pointer hover:bg-amber-50 hover:text-black hover:font-medium  hover:shadow-2xl shadow-fuchsia-200 ${
             isScrolled ? "text-black  hover:text-white hover:bg-indigo-600 hover:font-medium shadow-indigo-200" : "text-white "

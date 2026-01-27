@@ -1,111 +1,365 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+/* eslint-disable no-unused-vars */
+// src/pages/PaySuccess.jsx
+import React, { useEffect, useState, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { saveBookingDetails } from "../api/api_services";
 
-// --- [NEW] Define all keys to be cleared ---
-const BOOKING_DETAILS_KEY = 'currentBookingDetails';
-const TEMP_GUEST_COUNTS_KEY = 'tempGuestCounts';
-const TEMP_CHILDREN_AGES_KEY = 'tempChildrenAges';
-const BOOKING_CART_KEY = 'bookingCart';
-const TEMP_CONTACT_KEY = 'tempContactDetails';
-const TEMP_GUESTS_KEY = 'tempAdditionalGuests';
-const TEMP_SHOW_GST_KEY = 'tempShowGst';
-const TEMP_GST_DETAILS_KEY = 'tempGstDetails';
-const BOOKING_STEP_KEY = 'tempBookingStep';
-// --- [END NEW] ---
+const BOOKING_DETAILS_KEY = "currentBookingDetails";
+const TEMP_CONTACT_KEY = "tempContactDetails";
+const TEMP_GUEST_COUNTS_KEY = "tempGuestCounts";
 
-const PaySuccess = () => {
-    const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
-    const [paymentDetails, setPaymentDetails] = useState(null);
+const STORAGE_KEYS_TO_CLEAR = [
+  BOOKING_DETAILS_KEY,
+  TEMP_GUEST_COUNTS_KEY,
+  "tempChildrenAges",
+  "bookingCart",
+  TEMP_CONTACT_KEY,
+  "tempAdditionalGuests",
+  "tempShowGst",
+  "tempGstDetails",
+  "tempBookingStep",
+];
 
-    useEffect(() => {
-        const details = Object.fromEntries(searchParams.entries());
-        if (Object.keys(details).length > 0) {
-            setPaymentDetails(details);
-        }
-        
-        // --- [NEW] Clear all booking-related session storage ---
-        // This is the crucial fix
-        sessionStorage.removeItem(BOOKING_DETAILS_KEY);
-        sessionStorage.removeItem(TEMP_GUEST_COUNTS_KEY);
-        sessionStorage.removeItem(TEMP_CHILDREN_AGES_KEY);
-        sessionStorage.removeItem(BOOKING_CART_KEY);
-        sessionStorage.removeItem(TEMP_CONTACT_KEY);
-        sessionStorage.removeItem(TEMP_GUESTS_KEY);
-        sessionStorage.removeItem(TEMP_SHOW_GST_KEY);
-        sessionStorage.removeItem(TEMP_GST_DETAILS_KEY);
-        sessionStorage.removeItem(BOOKING_STEP_KEY);
-        // --- [END NEW] ---
+const getHotelParam = () => {
+  try {
+    const data = localStorage.getItem("hotelParam");
+    return data || "";
+  } catch {
+    return "";
+  }
+};
 
-    }, [searchParams]);
+const parseEasebuzzParams = (searchParams) => {
+  const params = Object.fromEntries(searchParams.entries());
+  Object.keys(params).forEach((key) => {
+    params[key] = decodeURIComponent(String(params[key]).replace(/\+/g, " "));
+  });
+  return params;
+};
 
-    const handleBackToHome = () => {
-        // --- [MODIFIED] Navigate directly to 'home' ---
-        navigate('*');
-    };
+const extractNameParts = (firstnameParam, contactSession) => {
+  let firstName = contactSession?.firstName || "";
+  let lastName = contactSession?.lastName || "";
 
-    const tableRows = paymentDetails ? [
-        { label: 'Payment Status', value: paymentDetails.status },
-        { label: 'Transaction ID', value: paymentDetails.txnid },
-        { label: 'Easepay ID', value: paymentDetails.easepayid },
-        { label: 'Amount', value: `₹${parseFloat(paymentDetails.amount).toFixed(2)}` },
-        { label: 'Email', value: paymentDetails.email },
-        { label: 'Phone', value: paymentDetails.phone },
-        { label: 'Card Type', value: paymentDetails.card_type },
-        { label: 'Bank Ref Num', value: paymentDetails.bank_ref_num },
-        { label: 'Product Info', value: paymentDetails.productinfo },
-        { label: 'Error Message', value: paymentDetails.error_Message },
-    ] : [];
+  if (!firstName || !lastName) {
+    const parts = (firstnameParam || "").trim().split(" ");
+    if (parts.length > 1) {
+      firstName = parts.slice(0, -1).join(" ");
+      lastName = parts.slice(-1).join(" ");
+    } else {
+      firstName = firstnameParam || "Guest";
+      lastName = "User";
+    }
+  }
+  return { firstName, lastName };
+};
 
+// eslint-disable-next-line no-unused-vars
+
+const getMissingParamsFromPayload = (payload) => {
+  const REQUIRED_FIELDS = [
+    "ApiUser",
+    "ApiPass",
+    "parameter",
+    "first_name",
+    "last_name",
+    "email",
+    "mobile",
+    "check_in_date",
+    "check_out_date",
+    "no_of_nights",
+    "no_of_guests",
+    "room_amount",
+    "tax_amount",
+    "grand_total",
+    "payment_status",
+    "payment_txn_id",
+    "room_details",
+  ];
+
+  return REQUIRED_FIELDS.filter((f) => {
+    const v = payload?.[f];
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-            <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl max-w-2xl w-full text-center">
-                <svg className="w-16 h-16 mx-auto text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <h1 className="text-3xl sm:text-4xl text-green-600 font-bold mt-4">Payment Successful!</h1>
-                <p className="text-base sm:text-lg text-gray-600 my-4">
-                    Thank you for your payment. Your booking has been confirmed.
-                </p>
-
-                {paymentDetails && (
-                    <div className="text-left my-6 sm:my-8 border-t border-b border-gray-200 py-4">
-                        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 text-center">Transaction Details</h2>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {tableRows.map(row => (
-                                        <tr key={row.label} className="hover:bg-gray-50">
-                                            <td className="px-4 sm:px-6 py-3 text-sm font-medium text-gray-600 whitespace-nowrap">{row.label}</td>
-                                            <td className="px-4 sm:px-6 py-3 text-sm text-gray-800 font-semibold whitespace-nowrap">{row.value}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-
-                <button
-                    className="py-2 px-6 text-base text-white bg-indigo-600 rounded-lg cursor-pointer hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-colors"
-                    onClick={handleBackToHome}
-                >
-                    Back to Home
-                </button>
-
-               
-            </div>
-        </div>
+      v === undefined ||
+      v === null ||
+      v === "" ||
+      (Array.isArray(v) && v.length === 0)
     );
+  });
+};
+
+const PaySuccess = ({ hotelData }) => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const [paymentDetails, setPaymentDetails] = useState(() => {
+    try {
+      const stored = localStorage.getItem("paymentDetails");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [saveStatus, setSaveStatus] = useState("idle");
+  const [apiResponse, setApiResponse] = useState(null);
+  const [apiError, setApiError] = useState(null);
+
+  // NEW: store payload to display on UI
+  const [payloadData, setPayloadData] = useState(null);
+
+  const dataSentRef = useRef(false);
+
+  useEffect(() => {
+    const parsed = parseEasebuzzParams(searchParams);
+    if (Object.keys(parsed).length > 0) {
+      setPaymentDetails(parsed);
+      localStorage.setItem("paymentDetails", JSON.stringify(parsed));
+    }
+  }, [searchParams]);
+
+  const sendBookingToApi = async (payload) => {
+    try {
+      setSaveStatus("sending");
+      localStorage.setItem("bookingApiPayload", JSON.stringify(payload));
+
+      const res = await saveBookingDetails(payload);
+
+      setApiResponse(res);
+      localStorage.setItem("bookingApiResponse", JSON.stringify(res));
+
+      if (res?.Success === true || res?.success === true) {
+        setSaveStatus("success");
+        STORAGE_KEYS_TO_CLEAR.forEach((k) => {
+          localStorage.removeItem(k);
+          sessionStorage.removeItem(k);
+        });
+      } else {
+        setSaveStatus("error");
+        setApiError(res?.Message || "Booking save failed");
+      }
+    } catch {
+      setSaveStatus("error");
+      setApiError("Server error while saving booking");
+    }
+  };
+
+  useEffect(() => {
+    if (!paymentDetails) return;
+
+    const status = String(paymentDetails.status || "").toLowerCase();
+    if (status !== "success") return;
+
+    if (dataSentRef.current) return;
+    dataSentRef.current = true;
+    setSaveStatus("sending");
+
+    try {
+      const bookingSession = JSON.parse(localStorage.getItem(BOOKING_DETAILS_KEY) || "{}");
+      const contactSession = JSON.parse(localStorage.getItem(TEMP_CONTACT_KEY) || "{}");
+      const guestCounts = JSON.parse(localStorage.getItem(TEMP_GUEST_COUNTS_KEY) || "{}");
+
+      if (!bookingSession?.rooms?.length) {
+        setSaveStatus("error");
+        setApiError("Booking session expired. No room data found.");
+        return;
+      }
+
+      const { firstName, lastName } = extractNameParts(
+        paymentDetails.firstname,
+        contactSession
+      );
+
+      const formatDate = (d) =>
+        d ? new Date(d).toISOString().split("T")[0] : "";
+      const num = (v) => parseFloat(v || 0);
+
+      const room_details = [];
+      bookingSession.rooms.forEach((room, idx) => {
+        for (let i = 0; i < room.quantity; i++) {
+          const key = `${room.roomId}_${idx}_${i}`;
+          const counts = guestCounts[key] || { adults: 1, children: 0 };
+          const nights = bookingSession?.dates?.nights || 1;
+
+          room_details.push({
+            room_type_id: room.roomId || "",
+            meal_plan_id: room.planId || 1,
+            no_of_rooms: 1,
+            no_of_adults: counts.adults,
+            no_of_children: counts.children,
+            extra_adult: 0,
+            extra_child: 0,
+            rate_per_night: num(room.pricePerNight),
+            no_of_nights: nights,
+            tax_amount: num(room.tax),
+            total_amount: num(room.pricePerNight) * nights,
+          });
+        }
+      });
+
+      const hotelParam = getHotelParam();
+      if (!hotelParam) {
+        setSaveStatus("error");
+        setApiError("Hotel security parameter missing.");
+        return;
+      }
+
+      const payload = {
+        ApiUser: import.meta.env.VITE_API_USERNAME,
+        ApiPass: import.meta.env.VITE_API_PASSWORD,
+        parameter: hotelParam,
+
+        guest_title: contactSession?.title || "Mr.",
+        first_name: firstName,
+        last_name: lastName,
+
+        email: paymentDetails?.email || contactSession?.email || "",
+        mobile: paymentDetails?.phone || contactSession?.phone || "",
+
+        no_of_guests:
+          (parseInt(bookingSession?.guests?.adults) || 0) +
+          (parseInt(bookingSession?.guests?.children) || 0),
+
+        check_in_date: formatDate(bookingSession?.dates?.checkIn),
+        check_out_date: formatDate(bookingSession?.dates?.checkOut),
+        no_of_nights: bookingSession?.dates?.nights || 1,
+
+        room_amount: num(bookingSession?.totalPrice),
+        tax_amount: num(bookingSession?.totalTax),
+        grand_total: num(paymentDetails?.amount),
+
+        payment_status: 1,
+        payment_txn_id: paymentDetails?.txnid || "",
+        room_details,
+        payment_gateway_response: paymentDetails || {},
+      };
+
+      // Store in local & state for UI
+      localStorage.setItem("bookingFinalPayload", JSON.stringify(payload));
+      setPayloadData(payload);
+
+      const missing = getMissingParamsFromPayload(payload);
+      if (missing.length > 0) {
+        setSaveStatus("error");
+        setApiError(`Missing required booking fields: ${missing.join(", ")}`);
+        return;
+      }
+
+      sendBookingToApi(payload);
+    } catch {
+      setSaveStatus("error");
+      setApiError("Failed to process booking.");
+    }
+  }, [paymentDetails, hotelData]);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
+
+      {/* SUCCESS ICON */}
+        <div className="w-16 h-16 flex items-center justify-center bg-green-100 rounded-full mx-auto mb-4">
+          <span className="text-green-600 text-4xl">✔</span>
+        </div>
+
+        <h2 className="text-3xl font-bold text-green-700 mb-2">
+          Payment Successful!
+        </h2>
+
+        <p className="text-gray-600 mb-6">
+          Your booking has been successfully confirmed.
+        </p>
+
+{/* 
+      <div className="mt-6 w-full max-w-3xl bg-white border rounded p-4 shadow">
+
+        {/* <h3 className="font-semibold mb-2">Booking API Status</h3> */}
+
+        {/* {saveStatus === "idle" && <p>⏳ Waiting for payment details...</p>}
+        {saveStatus === "sending" && <p>🚀 Saving booking...</p>}
+        {saveStatus === "success" && <p className="text-green-600">✅ Booking Saved Successfully!</p>} */}
+        {/* {saveStatus === "error" && (
+          <p className="text-red-600">❌ Booking Failed — {apiError}</p>
+        )} */}
+
+        {/* SHOW API RESPONSE */}
+        {/* {apiResponse && (
+          <div className="mt-3">
+            <h4 className="font-semibold">API Response</h4>
+            <pre className="p-2 bg-gray-100 border rounded text-xs overflow-auto">
+              {JSON.stringify(apiResponse, null, 2)}
+            </pre>
+          </div>
+        )} */}
+
+        {/* SHOW PAYLOAD ALWAYS */}
+        {/* {payloadData && (
+          <div className="mt-3">
+            <h4 className="font-semibold">Payload Sent to Server</h4>
+            <pre className="p-2 bg-gray-100 border rounded text-xs overflow-auto">
+              {JSON.stringify(payloadData, null, 2)}
+            </pre>
+          </div>
+        )} */}
+
+
+        {/* TRANSACTION BOX */}
+        <div className="border-t pt-6">
+          <h3 className="font-semibold text-lg mb-4">
+            Transaction Details
+          </h3>
+
+          <table className="w-full border rounded overflow-hidden">
+            <tbody>
+
+              <tr className="border-b">
+                <td className="p-3 font-medium text-gray-600">Payment Status</td>
+                <td className="p-3 font-semibold text-green-600">
+                  {paymentDetails?.status || "NA"}
+                </td>
+              </tr>
+
+              <tr className="border-b">
+                <td className="p-3 font-medium text-gray-600">Transaction ID</td>
+                <td className="p-3">{paymentDetails?.txnid || "NA"}</td>
+              </tr>
+
+              <tr className="border-b">
+                <td className="p-3 font-medium text-gray-600">Easebuzz ID</td>
+                <td className="p-3">{paymentDetails?.easepayid || "NA"}</td>
+              </tr>
+
+              <tr className="border-b">
+                <td className="p-3 font-medium text-gray-600">Amount</td>
+                <td className="p-3">₹{paymentDetails?.amount || "0.00"}</td>
+              </tr>
+
+              <tr className="border-b">
+                <td className="p-3 font-medium text-gray-600">Email</td>
+                <td className="p-3">{paymentDetails?.email || "NA"}</td>
+              </tr>
+
+              <tr className="border-b">
+                <td className="p-3 font-medium text-gray-600">Phone</td>
+                <td className="p-3">{paymentDetails?.phone || "NA"}</td>
+              </tr>
+
+              <tr>
+                <td className="p-3 font-medium text-gray-600">Product Info</td>
+                <td className="p-3">{paymentDetails?.productinfo || "Hotel Booking"}</td>
+              </tr>
+
+            </tbody>
+          </table>
+
+      </div>
+
+      <button
+        onClick={() => navigate("/")}
+        className="mt-6 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded"
+      >
+        Back to Home
+      </button>
+    </div>
+  );
 };
 
 export default PaySuccess;
-
-
-
-
-
-
-
-
-

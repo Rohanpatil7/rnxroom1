@@ -39,7 +39,15 @@ function RoomOption({ room, mealOption, onAddToCart, isBookingDisabled, bookingD
     <div key={key} className="flex p-4 border-b border-gray-200 last:border-b-0 items-center hover:bg-gray-50/50">
       {/* Column 1: Room Option Details */}
       <div className="w-2/3 pr-4">
-        <p className="font-semibold text-medium text-gray-800 sticky top-0 bg-white -z-0 py-2">{mealOption.MealPlan}</p>
+        <div className=' items-center gap-2 mb-1  '>
+          <p className="font-semibold text-medium text-gray-800 sticky top-0 bg-white -z-0 ">{`${mealOption.MealPlan} ` }</p>
+            <div className="text-xs font-normal text-black-700 flex ">
+               <svg className="w-4 h-4 text-indigo-500  mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            <p>{`${room.maxCapacityAdult} Adults ${room.maxCapacityChild} Childs`}</p>
+            </div>
+        </div>
          <ul className="list-disc list-inside text-xs text-gray-600 mt-2 space-y-1">
           {policies && policies.map((policy, index) => (
             <li key={index}>{policy}</li>

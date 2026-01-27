@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/pages/Booking.jsx
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -136,7 +137,7 @@ function Booking({ hotelData }) {
       navigate('/allrooms');
     }
     // ✅ Only re-run when URL (path/search) changes, not when location.state.step changes
-  }, [location.pathname, location.search, navigate]);
+  }, [location.state?.bookingDetails, navigate]);
 
   // 🔑 REAL-TIME updates from Guestcounter
   const handleGuestUpdate = useCallback(
@@ -191,10 +192,12 @@ function Booking({ hotelData }) {
 
   // Move from guest count to guest details
   const handleGuestConfirm = () => {
-    // ✅ Use React Router history instead of window.history
+    // ✅ FIX: Pass the updated bookingData.details (containing calculated costs)
+    // instead of relying on the potentially stale location.state.
     navigate('.', {
       state: {
         ...(location.state || {}),
+        bookingDetails: bookingData.details, // <--- Passing the updated state here
         step: 'guest-details',
       },
     });
@@ -250,7 +253,7 @@ function Booking({ hotelData }) {
         0
       ) ?? taxable * 0.18;
 
-    return taxable + gstAmount + serviceFee;
+    return 1;
   }, [bookingData.details, taxData, serviceFee]);
 
   if (!bookingData.details) {

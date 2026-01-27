@@ -5,8 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 const TEMP_GUEST_COUNTS_KEY = 'tempGuestCounts';
 const TEMP_CHILDREN_AGES_KEY = 'tempChildrenAges';
 
-// Max allowed child age
-const MAX_CHILD_AGE = 6;
+
 
 const MinusIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -21,6 +20,10 @@ const PlusIcon = () => (
 );
 
 const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, onConfirm, onGuestChange }) => {
+  // Max allowed child age
+  // src/components/Gueatcounter.jsx - CORRECTED
+  const MAX_CHILD_AGE = rooms?.[0]?.room?.FreeChildAge;
+  
   // Lazy initialize from sessionStorage, then props
   const [guestCounts, setGuestCounts] = useState(() => {
     try {
@@ -263,8 +266,8 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
 
     if (onConfirm) {
       onConfirm();
-      sessionStorage.removeItem(TEMP_GUEST_COUNTS_KEY);
-      sessionStorage.removeItem(TEMP_CHILDREN_AGES_KEY);
+      // sessionStorage.removeItem(TEMP_GUEST_COUNTS_KEY);
+      // sessionStorage.removeItem(TEMP_CHILDREN_AGES_KEY);
     }
   };
 
@@ -403,6 +406,7 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
                               placeholder="Age (optional)"
                               max={MAX_CHILD_AGE}
                               min="0"
+                              
                             />
 
                             {age !== '' && age > freeAgeLimit && (

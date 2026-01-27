@@ -2,13 +2,17 @@ import axios from 'axios';
 import {
   HOTEL_DETAILS_CONFIG,
   ROOM_RATES_CONFIG,
-  TAXES_CONFIG
+  TAXES_CONFIG,
+  SAVE_BOOKING_CONFIG, // [NEW] Import the new config
+  GET_BOOKING_FROM_MOB_CONFIG,
+  OTP_CONFIG,
+  CANCEL_BOOKING_CONFIG
 } from './api_config';
 
 // ... (getHotelDetails function remains the same) ...
 export async function getHotelDetails() {
   const { Url, ...payload } = HOTEL_DETAILS_CONFIG;
-  console.log('Fetching hotel details from:', Url);
+  // console.log('Fetching hotel details from:', Url);
   try {
     const response = await axios.post(Url, payload);
     return response.data;
@@ -74,3 +78,123 @@ export async function getTaxes() {
     throw error;
   }
 }
+
+
+export async function saveBookingDetails(data) {
+  // Deconstruct Url but ignore the static Parameter from config
+  const { Url, Parameter: staticParam, ...basePayload } = SAVE_BOOKING_CONFIG;
+
+  // ✅ Fetch the latest parameter from localStorage dynamically
+  const currentParam = localStorage.getItem("hotelParam") || staticParam;
+
+  let payload;
+  let headers = {};
+
+  if (data instanceof FormData) {
+    payload = data;
+    // Add base fields (including dynamic Parameter) to FormData
+    Object.keys(basePayload).forEach(key => {
+      if (!payload.has(key)) payload.append(key, basePayload[key]);
+    });
+    if (!payload.has('Parameter')) payload.append('Parameter', currentParam);
+  } else {
+    // Standard JSON payload with dynamic Parameter
+    payload = { ...basePayload, Parameter: currentParam, ...data };
+    headers['Content-Type'] = 'application/json';
+  }
+
+  console.log('Saving booking details to:', Url);
+
+  try {
+    const response = await axios.post(Url, payload, { headers });
+    return response.data;
+  } catch (error) {
+    console.error('Error saving booking details:', error.message);
+    throw error;
+  }
+}
+
+
+/* ---------------- SEND OTP ---------------- */
+export const sendOtp = async (mobile, otp) => {
+  const {
+    Url,
+    UserName,
+    Password,
+    Parameter
+  } = OTP_CONFIG;
+
+  // Construct payload to match: { ApiUser, ApiPass, Mobile, OTP, Parameter }
+  const payload = {
+    ApiUser: UserName,
+    ApiPass: Password,
+    Mobile: mobile,
+    OTP: otp,
+    Parameter: Parameter
+  };
+
+  console.log("Sending OTP to:", Url, payload);
+  
+  try {
+    const response = await axios.post(Url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    console.log("OTP API Response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("OTP send failed:", error.message);
+    throw error;
+  }
+};
+
+/* ---------------- FETCH BOOKINGS ---------------- */
+export const getBookingsFromMobile = async (mobile) => {
+  const { Url } = GET_BOOKING_FROM_MOB_CONFIG;
+
+  // ⛔ DO NOT USE basePayload
+  const payload = {
+    ApiUser: GET_BOOKING_FROM_MOB_CONFIG.UserName,
+    ApiPass: GET_BOOKING_FROM_MOB_CONFIG.Password,
+    Parameter: GET_BOOKING_FROM_MOB_CONFIG.Parameter,
+    MobileNo: mobile,
+  };
+
+  console.log("📤 FINAL booking payload:", payload);
+
+  try {
+    const { data } = await axios.post(Url, payload);
+    console.log("📥 Booking API response:", data);
+    return data;
+  } catch (error) {
+    console.error("❌ Booking fetch failed:", error);
+    throw error;
+  }
+};
+
+
+/* ---------------- CANCEL BOOKING ---------------- */
+export const cancelBooking = async (bookingData) => {
+  const { Url, UserName, Password } = CANCEL_BOOKING_CONFIG;
+
+  // Merge static credentials with dynamic booking data
+  const payload = {
+    ApiUser: UserName,
+    ApiPass: Password,
+    ...bookingData // { HotelId, BookingID, CancellationReason, UserId }
+  };
+
+  console.log("📤 Cancelling booking with payload:", payload);
+
+  try {
+    const response = await axios.post(Url, payload, {
+        headers: { 'Content-Type': 'application/json' }
+    });
+    console.log("📥 Cancel API response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Cancel booking failed:", error.message);
+    throw error;
+  }
+};

@@ -75,6 +75,7 @@ function Roomcard({ room, bookingDetails, onAddToCart }) {
     <div className="w-full md:w-1/3 p-4 border-r border-gray-200 flex flex-col">
       <div className="sticky top-0 bg-white z-10 text-md font-bold text-gray-800 pb-2">
         <h3 className="">{room.title}</h3>
+        
       </div>
         
         
@@ -86,7 +87,7 @@ function Roomcard({ room, bookingDetails, onAddToCart }) {
             showNav={false}
             showFullscreenButton={true}
             autoPlay={true}
-            slideInterval={5000}
+            slideInterval={4000}
             showBullets={true}
             renderItem={renderItem}
             renderThumbInner={renderThumbInner}
