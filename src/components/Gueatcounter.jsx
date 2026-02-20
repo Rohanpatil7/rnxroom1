@@ -1,11 +1,23 @@
-// src/components/Gueatcounter.jsx - FINAL CORRECTED LOGIC
-
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+// src/components/Gueatcounter.jsx
+import React, { useState, useEffect, useMemo } from 'react';
 
 const TEMP_GUEST_COUNTS_KEY = 'tempGuestCounts';
 const TEMP_CHILDREN_AGES_KEY = 'tempChildrenAges';
 
-
+const CounterButton = ({ onClick, disabled, icon: Icon }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    type="button"
+    className={`p-1 rounded-full transition-all duration-200 ${
+      disabled 
+        ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50' 
+        : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 hover:scale-110 active:scale-95 cursor-pointer'
+    }`}
+  >
+    <Icon />
+  </button>
+);
 
 const MinusIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -19,34 +31,108 @@ const PlusIcon = () => (
   </svg>
 );
 
-const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, onConfirm, onGuestChange }) => {
-  // Max allowed child age
-  // src/components/Gueatcounter.jsx - CORRECTED
-  const MAX_CHILD_AGE = rooms?.[0]?.room?.FreeChildAge;
+const TrashIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+  </svg>
+);
+
+const getRateForPax = (rates, adultCount) => {
+  if (!rates || !Array.isArray(rates) || rates.length === 0) {
+    return { rate: 0, childRate: 0, extraComponent: 0 };
+  }
+
+  // 1. Exact Match Check
+  const exactMatch = rates.find(r => r.NoOfPax === adultCount);
+  if (exactMatch) {
+    return { 
+      rate: parseFloat(exactMatch.Rate || 0), 
+      childRate: parseFloat(exactMatch.PaidChildRate || 0),
+      extraComponent: 0 
+    };
+  }
+
+  // 2. Find Max Defined Pax
+  const maxPaxRate = rates.reduce((prev, curr) => (prev.NoOfPax > curr.NoOfPax ? prev : curr), rates[0]);
   
-  // Lazy initialize from sessionStorage, then props
+  // 3. Exceeded Max Pax Logic
+  if (adultCount > maxPaxRate.NoOfPax) {
+    const extraAdults = adultCount - maxPaxRate.NoOfPax;
+    const baseRate = parseFloat(maxPaxRate.Rate || 0);
+    const extraRate = parseFloat(maxPaxRate.ExtraAdultRate || 0);
+    
+    // Total Rate = Base + Extra
+    const extraCostTotal = extraAdults * extraRate;
+    const calculatedRate = baseRate + extraCostTotal;
+    
+    return { 
+      rate: calculatedRate, 
+      childRate: parseFloat(maxPaxRate.PaidChildRate || 0),
+      extraComponent: extraCostTotal 
+    };
+  }
+
+  // 4. Fallback
+  return { 
+    rate: parseFloat(maxPaxRate.Rate || 0), 
+    childRate: parseFloat(maxPaxRate.PaidChildRate || 0),
+    extraComponent: 0
+  };
+};
+
+const Gueatcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, onConfirm, onGuestChange, onRemoveRoom }) => {
+  
+  const roomInstances = useMemo(() => {
+    if (!rooms || rooms.length === 0) return [];
+
+    return rooms.flatMap((room, roomIndex) => {
+      const rates = room.selectedMealPlan?.Rates || [];
+      const std = room.selectedMealPlan?.userSelectedPax || room.room?.RoomMinCapacity || 1;
+      
+      // Force minAdults to 1 to allow decrementing below standard
+      const minAdults = 1; 
+      
+      const maxAdults = room.room?.maxCapacityAdult ?? room.room?.RoomMaxCapacityAdult ?? 4;
+      const maxChildren = room.room?.maxCapacityChild ?? room.room?.RoomMaxCapacityChild ?? 4;
+
+      // --- Retrieve the paxCount variable passed from BookingCart ---
+      const paxCount = room.paxCount || room.room?.RoomMinCapacity || 1;
+
+      return Array.from({ length: room.quantity }).map((_, i) => ({
+        instanceId: `${room.roomId}_${roomIndex}_${i}`,
+        roomId: room.roomId,
+        roomIndex: roomIndex,
+        title: room.title,
+        instanceNum: i + 1,
+        metrics: { std, maxAdults, maxChildren, minAdults, rates, paxCount }
+      }));
+    });
+  }, [rooms]);
+
   const [guestCounts, setGuestCounts] = useState(() => {
     try {
-      const storedCounts = sessionStorage.getItem(TEMP_GUEST_COUNTS_KEY);
-      return storedCounts ? JSON.parse(storedCounts) : (initialGuestCounts || {});
-    } catch {
-      return initialGuestCounts || {};
-    }
+      const stored = sessionStorage.getItem(TEMP_GUEST_COUNTS_KEY);
+      if (stored) return JSON.parse(stored);
+      const defaults = {};
+      if (rooms) {
+        rooms.forEach((room, rIdx) => {
+           const initialAdults = room.selectedMealPlan?.userSelectedPax || room.room?.RoomMinCapacity || 1;
+           for(let i=0; i<room.quantity; i++) {
+             defaults[`${room.roomId}_${rIdx}_${i}`] = { adults: initialAdults, children: 0 };
+           }
+        });
+      }
+      return defaults;
+    } catch { return initialGuestCounts || {}; }
   });
 
   const [childrenAges, setChildrenAges] = useState(() => {
     try {
-      const storedAges = sessionStorage.getItem(TEMP_CHILDREN_AGES_KEY);
-      return storedAges ? JSON.parse(storedAges) : (initialChildrenAges || {});
-    } catch {
-      return initialChildrenAges || {};
-    }
+      const stored = sessionStorage.getItem(TEMP_CHILDREN_AGES_KEY);
+      return stored ? JSON.parse(stored) : (initialChildrenAges || {});
+    } catch { return initialChildrenAges || {}; }
   });
 
-  const [occupancyErrors, setOccupancyErrors] = useState({});
-  const [formErrors, setFormErrors] = useState({});
-
-  // Persist drafts
   useEffect(() => {
     sessionStorage.setItem(TEMP_GUEST_COUNTS_KEY, JSON.stringify(guestCounts));
   }, [guestCounts]);
@@ -55,375 +141,257 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
     sessionStorage.setItem(TEMP_CHILDREN_AGES_KEY, JSON.stringify(childrenAges));
   }, [childrenAges]);
 
-  // Cost + guests calculation
-  const calculateCostsAndGuests = useCallback((currentGuestCounts) => {
-    let totalExtraAdultCost = 0;
-    let totalExtraChildCost = 0;
-    let totalGuests = 0;
-    const nights = dates?.nights || 0;
-
-    if (rooms && nights > 0) {
-      Object.entries(currentGuestCounts).forEach(([instanceId, counts]) => {
-        totalGuests += (counts.adults || 0) + (counts.children || 0);
-
-        const roomIndex = parseInt(instanceId.split('_')[1], 10);
-        const roomData = rooms[roomIndex];
-        if (!roomData) return;
-
-        const rates = roomData.selectedMealPlan?.Rates;
-        if (!rates) return;
-
-        const extraAdultRate = parseFloat(rates.ExtraAdultRate || 0);
-        const extraChildRate = parseFloat(rates.ExtraChildRate || 0);
-
-        const maxAdults = roomData.room.maxCapacityAdult;
-        const maxChildren = roomData.room.maxCapacityChild || 0;
-        const totalChildren = counts.children || 0;
-
-        if (counts.adults > maxAdults && extraAdultRate > 0) {
-          const extraAdults = counts.adults - maxAdults;
-          totalExtraAdultCost += extraAdults * extraAdultRate * nights;
-        }
-
-        if (totalChildren > maxChildren && extraChildRate > 0) {
-          const extraChildren = totalChildren - maxChildren;
-          totalExtraChildCost += extraChildren * extraChildRate * nights;
-        }
-      });
-    }
-
-    return {
-      extraAdultCost: totalExtraAdultCost,
-      extraChildCost: totalExtraChildCost,
-      totalGuests,
-    };
-  }, [rooms, dates]);
-
-  // notify parent on change
   useEffect(() => {
     if (!onGuestChange) return;
 
-    const { extraAdultCost, extraChildCost, totalGuests } =
-      calculateCostsAndGuests(guestCounts, childrenAges);
+    let totalCalculatedRoomCost = 0;
+    let totalExtraAdultCost = 0; 
+    let totalExtraChildCost = 0;
+    let totalGuests = 0;
+    
+    // New Map to store base cost per Room Type ID
+    const roomTypeBaseCosts = {}; 
 
-    onGuestChange({
-      guestCounts,
-      childrenAges,
-      extraAdultCost,
-      extraChildCost,
-      totalGuests,
+    const nights = dates?.nights || 0;
+
+    roomInstances.forEach(({ instanceId, roomId, title, metrics }) => {
+      const counts = guestCounts[instanceId] || { adults: metrics.minAdults, children: 0 };
+      totalGuests += (counts.adults || 0) + (counts.children || 0);
+
+      const pricing = getRateForPax(metrics.rates, counts.adults);
+      
+      // Calculate costs for this specific instance
+      const instanceFullCost = pricing.rate * nights;
+      const instanceExtraCost = pricing.extraComponent * nights;
+      const instanceBaseCost = instanceFullCost - instanceExtraCost; // This is the value to show next to room name
+
+      // Global Totals
+      totalCalculatedRoomCost += instanceFullCost;
+      if (pricing.extraComponent > 0) {
+        totalExtraAdultCost += instanceExtraCost;
+      }
+
+      // Aggregate Base Cost by Room Type (for Costcard display)
+      roomTypeBaseCosts[roomId] = (roomTypeBaseCosts[roomId] || 0) + instanceBaseCost;
+
+      // --- [UPDATED LOGIC START] ---
+      // Check individual children's ages. If age > 5, apply the charge.
+      const instanceAges = childrenAges[instanceId] || [];
+      const chargeableChildrenCount = instanceAges.filter(age => {
+        const val = parseInt(age, 10);
+        return !isNaN(val) && val > 5;
+      }).length;
+
+      if (chargeableChildrenCount > 0) {
+        totalExtraChildCost += (chargeableChildrenCount * pricing.childRate * nights);
+      }
+      // --- [UPDATED LOGIC END] ---
+      
     });
-  }, [guestCounts, childrenAges, onGuestChange, calculateCostsAndGuests]);
 
-  // Build room instances
-  const roomInstances = useMemo(() => {
-    if (!rooms || rooms.length === 0) return [];
-    return rooms.flatMap((room, roomIndex) =>
-      Array.from({ length: room.quantity }).map((_, i) => ({
-        instanceId: `${room.roomId}_${roomIndex}_${i}`,
-        details: room,
-        instanceNum: i + 1,
-      }))
-    );
-  }, [rooms]);
+    onGuestChange({ 
+      guestCounts, 
+      childrenAges, 
+      totalCalculatedRoomCost, 
+      totalExtraAdultCost, 
+      extraChildCost: totalExtraChildCost, 
+      roomTypeBaseCosts, // Pass the breakdown map
+      totalGuests 
+    });
+  }, [guestCounts, childrenAges, onGuestChange, dates?.nights, roomInstances]);
 
-  // Validate loaded counts (for occupancy warnings)
-  useEffect(() => {
-    if (roomInstances.length === 0 || Object.keys(guestCounts).length === 0) {
-      return;
-    }
+  const handleCountChange = (instanceId, type, delta, metrics) => {
+    setGuestCounts(prev => {
+      const current = prev[instanceId] || { adults: metrics.minAdults, children: 0 };
+      const newValue = current[type] + delta;
 
-    const initialErrors = {};
-
-    for (const { instanceId, details } of roomInstances) {
-      const roomDetails = details.room;
-      const counts = guestCounts[instanceId] || { adults: 1, children: 0 };
-      const newAdults = counts.adults;
-      const newChildren = counts.children;
-      const totalGuests = newAdults + newChildren;
-
-      let errorMsg = null;
-      const maxAdults = roomDetails.maxCapacityAdult || roomDetails.maxOccupancy;
-      const maxChildren = roomDetails.maxCapacityChild || roomDetails.maxOccupancy;
-      const maxTotal = roomDetails.maxOccupancy;
-
-      const adultOverage = Math.max(0, newAdults - maxAdults);
-      const childOverage = Math.max(0, newChildren - maxChildren);
-      const totalOverage = Math.max(0, totalGuests - maxTotal);
-
-      if (totalOverage > 0) {
-        let reasons = [];
-        if (adultOverage > 0) reasons.push(`${adultOverage} adult(s)`);
-        if (childOverage > 0) reasons.push(`${childOverage} child(ren)`);
-
-        errorMsg =
-          reasons.length > 0
-            ? `Exceeding max occupancy (${maxTotal}) by ${reasons.join(' and ')}. Extra charges may apply.`
-            : `Exceeding max occupancy (${maxTotal}) by ${totalOverage} guest(s). Extra charges may apply.`;
-      } else if (adultOverage > 0) {
-        errorMsg = `Exceeding max adults (${maxAdults}) by ${adultOverage} adult(s). Extra charges may apply.`;
-      } else if (childOverage > 0) {
-        errorMsg = `Exceeding max children (${maxChildren}) by ${childOverage} child(ren). Extra charges may apply.`;
+      if (type === 'adults') {
+        if (newValue < metrics.minAdults) return prev;
+        if (newValue > metrics.maxAdults) return prev;
+      } else {
+        if (newValue < 0 || newValue > metrics.maxChildren) return prev;
       }
 
-      if (errorMsg) {
-        initialErrors[instanceId] = errorMsg;
-      }
-    }
-
-    setOccupancyErrors(initialErrors);
-  }, [roomInstances, guestCounts]);
-
-  const handleCountChange = (instanceId, type, delta, roomDetails) => {
-    setGuestCounts(prevCounts => {
-      const currentCounts = { ...(prevCounts[instanceId] || { adults: 1, children: 0 }) };
-      const newCount = currentCounts[type] + delta;
-
-      if ((type === 'adults' && newCount < 1) || (type === 'children' && newCount < 0)) {
-        return prevCounts;
-      }
-
-      const newAdults = (type === 'adults' ? newCount : currentCounts.adults);
-      const newChildren = (type === 'children' ? newCount : currentCounts.children);
-      const totalGuests = newAdults + newChildren;
-
-      let errorMsg = null;
-      const maxAdults = roomDetails.maxCapacityAdult || roomDetails.maxOccupancy;
-      const maxChildren = roomDetails.maxCapacityChild || roomDetails.maxOccupancy;
-      const maxTotal = roomDetails.maxOccupancy;
-
-      const adultOverage = Math.max(0, newAdults - maxAdults);
-      const childOverage = Math.max(0, newChildren - maxChildren);
-      const totalOverage = Math.max(0, totalGuests - maxTotal);
-
-      if (totalOverage > 0) {
-        let reasons = [];
-        if (adultOverage > 0) reasons.push(`${adultOverage} adult(s)`);
-        if (childOverage > 0) reasons.push(`${childOverage} child(ren)`);
-
-        errorMsg =
-          reasons.length > 0
-            ? `Exceeding max occupancy (${maxTotal}) by ${reasons.join(' and ')}. Extra charges may apply.`
-            : `Exceeding max occupancy (${maxTotal}) by ${totalOverage} guest(s). Extra charges may apply.`;
-      } else if (adultOverage > 0) {
-        errorMsg = `Exceeding max adults (${maxAdults}) by ${adultOverage} adult(s). Extra charges may apply.`;
-      } else if (childOverage > 0) {
-        errorMsg = `Exceeding max children (${maxChildren}) by ${childOverage} child(ren). Extra charges may apply.`;
-      }
-
-      setOccupancyErrors(prevErrors => {
-        if (errorMsg) {
-          return { ...prevErrors, [instanceId]: errorMsg };
-        }
-        const newErrors = { ...prevErrors };
-        delete newErrors[instanceId];
-        return newErrors;
-      });
-
-      const updatedCounts = { ...prevCounts, [instanceId]: { ...currentCounts, [type]: newCount } };
+      const updated = { ...prev, [instanceId]: { ...current, [type]: newValue } };
 
       if (type === 'children') {
         setChildrenAges(prevAges => {
-          const currentAges = prevAges[instanceId] || [];
-          const newAges = new Array(newCount).fill('').map((_, i) => currentAges[i] || '');
-          return { ...prevAges, [instanceId]: newAges };
+          const ages = [...(prevAges[instanceId] || [])];
+          if (delta > 0) ages.push(''); 
+          else ages.pop();
+          return { ...prevAges, [instanceId]: ages };
         });
       }
-
-      return updatedCounts;
+      return updated;
     });
   };
 
-  // child age input: optional + max 6
-  const handleChildAgeChange = (instanceId, childIndex, age) => {
-    let parsed = parseInt(age, 10);
-
-    if (Number.isNaN(parsed)) {
-      parsed = ''; // optional
-    } else {
+  const handleChildAgeChange = (instanceId, index, val) => {
+    let parsed = parseInt(val, 10);
+    if (isNaN(parsed)) parsed = '';
+    else {
+      // --- [UPDATED LOGIC START] ---
+      // If user inputs a value greater than 5, automatically set it to 6.
+      if (parsed > 5) {
+        parsed = 6;
+      }
+      // Ensure age is not negative (though 6 is safe, this handles other inputs)
       if (parsed < 0) parsed = 0;
-      if (parsed > MAX_CHILD_AGE) parsed = MAX_CHILD_AGE;
+      // --- [UPDATED LOGIC END] ---
     }
 
-    setChildrenAges(prevAges => {
-      const updatedAges = [...(prevAges[instanceId] || [])];
-      updatedAges[childIndex] = parsed;
-      return { ...prevAges, [instanceId]: updatedAges };
+    setChildrenAges(prev => {
+      const ages = [...(prev[instanceId] || [])];
+      ages[index] = parsed;
+      return { ...prev, [instanceId]: ages };
     });
-
-    if (formErrors[instanceId]) {
-      setFormErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[instanceId];
-        return newErrors;
-      });
-    }
   };
 
-  const handleConfirmGuests = () => {
-    // no required age validation now
-    setFormErrors({});
-
-    if (onConfirm) {
-      onConfirm();
-      // sessionStorage.removeItem(TEMP_GUEST_COUNTS_KEY);
-      // sessionStorage.removeItem(TEMP_CHILDREN_AGES_KEY);
-    }
-  };
-
-  if (!rooms || rooms.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-2 text-center bg-white rounded-2xl shadow-lg mt-2 max-w-3xl mx-auto">
-        <h3 className="text-2xl font-bold text-gray-800">Guest Information</h3>
-        <p className="mt-2 text-gray-500">
-          Your booking details could not be loaded. Please go back and select a room first.
-        </p>
-      </div>
-    );
-  }
+  if (roomInstances.length === 0) return null;
 
   return (
     <div className="w-full max-w-3xl mx-auto p-1 font-Rubik">
       <div className="bg-white p-2 sm:p-2 rounded-2xl shadow-xl">
         <div className="mb-6 text-center">
           <h2 className="text-xl sm:text-md font-bold text-gray-900">Guest Details</h2>
-          <p className="text-sm sm:text-xs text-gray-500 mt-2">
-            Specify the number of adults and children for each room.
-          </p>
+          <p className="text-sm sm:text-xs text-gray-500 mt-2">Specify adults and children for each room.</p>
         </div>
 
         <div className="space-y-6 text-sm">
-          {roomInstances.map(({ instanceId, details, instanceNum }) => {
-            const currentGuestCount =
-              (guestCounts[instanceId]?.adults || 0) +
-              (guestCounts[instanceId]?.children || 0);
+          {roomInstances.map(({ instanceId, title, instanceNum, metrics, roomIndex }) => {
+            const counts = guestCounts[instanceId] || { adults: metrics.minAdults, children: 0 };
+            const currentTotal = (counts.adults || 0) + (counts.children || 0);
+            
+            const isMinAdults = counts.adults <= metrics.minAdults;
+            const isMaxAdults = counts.adults >= metrics.maxAdults;
+            const isMinChildren = counts.children <= 0;
+            const isMaxChildren = counts.children >= metrics.maxChildren;
 
+            // --- Extra Guest Calculation ---
+            const rates = metrics.rates;
+            // Determine the standard capacity limit from rates
+            const maxPaxRate = rates && rates.length > 0 
+                ? rates.reduce((prev, curr) => (prev.NoOfPax > curr.NoOfPax ? prev : curr), rates[0]) 
+                : null;
+            const adultThreshold = maxPaxRate ? maxPaxRate.NoOfPax : metrics.std;
+            const extraAdults = counts.adults > adultThreshold ? counts.adults - adultThreshold : 0;
+
+            const extraChildren = counts.children; 
+
+            const hasExtras = extraAdults > 0 || extraChildren > 0;
+            // --------------------------------
+            
             return (
-              <div key={instanceId} className="bg-gray-50 p-4 sm:p-5 rounded-xl border border-gray-200">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-gray-200 pb-4 mb-4">
-                  <div>
-                    <h4 className="text-md sm:text-md font-semibold text-gray-800">{details.title}</h4>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Room {instanceNum} |
-                      {(details.room.maxCapacityAdult && details.room.maxCapacityAdult > 0) ? (
-                        <> Max: {details.room.maxCapacityAdult} Adults, {details.room.maxCapacityChild || 0} Children</>
-                      ) : (
-                        <> Max Occupancy: {details.room.maxOccupancy} guests</>
-                      )}
-                    </p>
+              <div key={instanceId} className="bg-gray-50 p-4 sm:p-5 rounded-xl border border-indigo-200 relative group">
+                 <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-gray-200 pb-4 mb-4">
+                  <div className="flex justify-between w-full sm:w-auto sm:block">
+                    <div>
+                      <h4 className="text-md sm:text-md font-semibold text-gray-800">{title}</h4>
+                      {/* UPDATED: Showing the passed PaxCount variable (e.g. 4) */}
+                      <p className="text-xs text-gray-500 mt-1">
+                        Room {instanceNum} | Base : {metrics.paxCount} Adults, Max: {metrics.maxAdults} Adults
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-600 mt-2 sm:mt-0 flex-shrink-0">
-                    Total Guests:{' '}
-                    <span className="font-bold text-indigo-600">{currentGuestCount}</span>
+                  
+                  <div className="flex items-center sm:items-end justify-between gap-4 mt-2 sm:mt-0">
+                    <div className="text-xs text-gray-600 flex-shrink-0">
+                      Total Guests: <span className="font-bold text-indigo-600">{currentTotal}</span>
+                    </div>
+                    {onRemoveRoom && (
+                      <button 
+                        onClick={() => onRemoveRoom(roomIndex)}
+                        className="text-red-400 hover:text-red-500 p-1.5 hover:bg-red-50 rounded-full transition-all duration-200"
+                        title="Remove Room"
+                      >
+                        <TrashIcon />
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                  {/* Adults */}
                   <div className="flex items-center justify-around gap-1">
                     <label className="text-sm font-medium text-gray-700">Adults</label>
-                    <div className="flex items-center gap-0.5">
-                      <button
-                        onClick={() => handleCountChange(instanceId, 'adults', -1, details.room)}
-                        className={`p-1 rounded-full transition-colors ${(guestCounts[instanceId]?.adults || 1) <= 1
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-300 cursor-pointer'
-                          }`}
-                        disabled={(guestCounts[instanceId]?.adults || 1) <= 1}
-                      >
-                        <MinusIcon />
-                      </button>
-                      <span className="text-md font-semibold w-6 text-center">{guestCounts[instanceId]?.adults || 1}</span>
-                      <button
-                        onClick={() => handleCountChange(instanceId, 'adults', 1, details.room)}
-                        className="p-1 rounded-full transition-colors bg-indigo-100 text-indigo-700 hover:bg-indigo-300 cursor-pointer"
-                      >
-                        <PlusIcon />
-                      </button>
+                    <div className="flex items-center gap-2">
+                      <CounterButton 
+                        onClick={() => handleCountChange(instanceId, 'adults', -1, metrics)} 
+                        disabled={isMinAdults} 
+                        icon={MinusIcon} 
+                      />
+                      <span className="text-md font-semibold w-6 text-center">{counts.adults}</span>
+                      <CounterButton 
+                        onClick={() => handleCountChange(instanceId, 'adults', 1, metrics)} 
+                        disabled={isMaxAdults} 
+                        icon={PlusIcon} 
+                      />
                     </div>
                   </div>
 
-                  {/* Children */}
                   <div className="flex items-center justify-around gap-1">
                     <label className="text-sm font-medium text-gray-700">Children</label>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleCountChange(instanceId, 'children', -1, details.room)}
-                        className={`p-1 rounded-full transition-colors ${(guestCounts[instanceId]?.children || 0) <= 0
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-300 cursor-pointer'
-                          }`}
-                        disabled={(guestCounts[instanceId]?.children || 0) <= 0}
-                      >
-                        <MinusIcon />
-                      </button>
-                      <span className="text-md font-semibold w-4 text-center">{guestCounts[instanceId]?.children || 0}</span>
-                      <button
-                        onClick={() => handleCountChange(instanceId, 'children', 1, details.room)}
-                        className="p-1 rounded-full transition-colors bg-indigo-100 text-indigo-700 hover:bg-indigo-300 cursor-pointer"
-                      >
-                        <PlusIcon />
-                      </button>
+                      <CounterButton 
+                        onClick={() => handleCountChange(instanceId, 'children', -1, metrics)} 
+                        disabled={isMinChildren} 
+                        icon={MinusIcon} 
+                      />
+                      <span className="text-md font-semibold w-4 text-center">{counts.children}</span>
+                      <CounterButton 
+                        onClick={() => handleCountChange(instanceId, 'children', 1, metrics)} 
+                        disabled={isMaxChildren} 
+                        icon={PlusIcon} 
+                      />
                     </div>
                   </div>
                 </div>
-
-                {occupancyErrors[instanceId] && (
-                  <div className="mt-4 p-3 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded-r-lg" role="alert">
-                    <p className="font-semibold">Occupancy Notice</p>
-                    <p className="text-sm">{occupancyErrors[instanceId]}</p>
-                  </div>
+                
+                {/* Warning for Extra Guests */}
+                {hasExtras && (
+                    <div className="mt-4 p-2.5 bg-yellow-50 border border-yellow-200 rounded-md flex items-start gap-2.5 animate-fadeIn">
+                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5">
+                          <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+                       </svg>
+                       <div className="flex-1">
+                          
+                          <p className="text-xs text-yellow-700 mt-0.5">
+                            {extraAdults > 0 && "Exceeding standard capacity "}
+                            {extraAdults > 0 && <span className="font-bold"> {extraAdults} Adult{extraAdults > 1 ? 's' : ''}</span>}
+                            {extraAdults > 0 && extraChildren > 0 && <span>, </span>}
+                            {extraChildren > 0 && <span className="font-bold"> {extraChildren} Child{extraChildren > 1 ? 'ren' : ''}</span>}
+                            
+                            {/* Dynamic Text based on what is added */}
+                            {extraAdults > 0 && extraChildren > 0 
+                                ? ". Extra adult & child fees apply." 
+                                : (extraAdults > 0 
+                                    ? ". Extra adult fees apply." 
+                                    : " added. Child fees apply.")}
+                          </p>
+                       </div>
+                    </div>
                 )}
 
                 {childrenAges[instanceId]?.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <h5 className="text-sm flex font-medium text-gray-700 mb-3 gap-2">
-                      Children&apos;s Ages
-                      <p className='text-[10px] text-align-middle'>
-                        {`(optional) (age below ${details.room.FreeChildAge} years) `}
-                      </p>
+                      Children&apos;s Ages <span className='text-[10px] self-center text-gray-400 font-normal'>(optional)</span>
                     </h5>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-0.5">
-                      {childrenAges[instanceId].map((age, index) => {
-                        const freeAgeLimit = details.room.FreeChildAge;
-
-                        return (
-                          <div key={index}>
-                            <label
-                              htmlFor={`child-age-${instanceId}-${index}`}
-                              className="block text-xs text-gray-500 mb-1"
-                            >
-                              Child {index + 1}
-                            </label>
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              id={`child-age-${instanceId}-${index}`}
-                              name={`child-age-${instanceId}-${index}`}
-                              value={age}
-                              onChange={e => handleChildAgeChange(instanceId, index, e.target.value)}
-                              className="w-full px-3 py-2 text-center bg-white border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition border-gray-300"
-                              placeholder="Age (optional)"
-                              max={MAX_CHILD_AGE}
-                              min="0"
-                              
-                            />
-
-                            {age !== '' && age > freeAgeLimit && (
-                              <p className="text-xs text-orange-600 mt-1">
-                                Fee may apply (over {freeAgeLimit} yrs).
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                      {childrenAges[instanceId].map((age, index) => (
+                        <div key={index}>
+                          <label className="block text-xs text-gray-500 mb-1">Child {index + 1}</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={age}
+                            onChange={e => handleChildAgeChange(instanceId, index, e.target.value)}
+                            className="w-full px-3 py-2 text-center bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition text-sm"
+                            placeholder="Age"
+                            min="0"
+                          />
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                )}
-
-                {formErrors[instanceId] && (
-                  <div className="mt-3 text-sm font-medium text-red-600" role="alert">
-                    {formErrors[instanceId]}
                   </div>
                 )}
               </div>
@@ -432,10 +400,10 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
         </div>
 
         <div className="mt-8">
-          <button
-            type="button"
-            onClick={handleConfirmGuests}
-            className="w-full bg-gradient-to-b from-indigo-500 via-indigo-600 to-indigo-700  text-white font-medium py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all duration-300 ease-in-out transform hover:scale-101 cursor-pointer"
+          <button 
+            type="button" 
+            onClick={onConfirm} 
+            className="w-full bg-gradient-to-b from-indigo-500 via-indigo-600 to-indigo-700 text-white font-medium py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition-all duration-300 transform active:scale-95 hover:scale-[1.01] shadow-md cursor-pointer"
           >
             Confirm Guests
           </button>
@@ -445,4 +413,4 @@ const Guestcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
   );
 };
 
-export default Guestcounter;
+export default Gueatcounter;

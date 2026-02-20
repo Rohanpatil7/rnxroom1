@@ -51,16 +51,16 @@ const Navbar = ({hotelData}) => {
         <img
           src={hotelData?.LogoUrl}
           alt="logo"
-          className={`size-16  justify-center  items-center hover:scale-110 transition-all duration-300`}
+          className={`size-16  justify-center align-bottom items-center hover:scale-110 transition-all duration-300`}
           //  ${isScrolled && "invert opacity-100 "}
         />
       </Link>
 
       {/* Desktop Nav */}
-      <div className={`flex flex-col items-center gap-0.5 w-full md:w-auto sm:w-auto`}>
+      <div className={`flex flex-col items-center gap-0.5 w-full md:w-auto sm:w-auto h-auto md:ml-8 lg:ml-16`}>
         <h2 className={`text-2xl font-bold  `}>{hotelData?.HotelName}</h2>
          {/* ${isScrolled ? 'text-black' : 'text-white'} */}
-        <p className={`text-sm `}>{hotelData?.Address}</p>
+        <p className={`text-xs justify-center text-center `}>{hotelData?.Address}</p>
         {/* ${isScrolled ? 'text-black' : 'text-white'} */}
       </div>
       <div className="hidden md:flex items-center gap-4 lg:gap-8 ">

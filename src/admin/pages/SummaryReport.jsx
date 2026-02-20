@@ -2,11 +2,12 @@
 import React, { useEffect, useState } from "react";
 import { 
   Calendar, Search, Download, FileText, 
-  CheckCircle, IndianRupee, PieChart, AlertCircle
+  CheckCircle, IndianRupee, PieChart, AlertCircle, 
+  XCircle, Filter, RefreshCw, TrendingUp 
 } from "lucide-react";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer 
+  Tooltip, ResponsiveContainer, Cell 
 } from "recharts";
 import { BallTriangle } from "react-loader-spinner";
 
@@ -43,7 +44,6 @@ export default function SummaryReport() {
       if (response?.status === 1) {
         setPaymentSummary(response.payment_summary || null);
 
-        // Normalize data keys if backend has typos (e.g., catergory_name)
         const categories = (response.categorywise_bookings || []).map(
           (item) => ({
             category_name: item.category_name ?? item.catergory_name ?? "Unknown",
@@ -74,155 +74,174 @@ export default function SummaryReport() {
     loadSummaryReport();
   }, []);
 
-  const totalBookingAmount = categoryList.reduce(
-    (sum, item) => sum + item.booking_amount,
-    0
-  );
+  // Calculate Total Revenue for Percentage Bars
+  const totalRevenue = categoryList.reduce((sum, item) => sum + item.booking_amount, 0);
 
   const handleExport = () => {
     if (categoryList.length === 0) return;
-    
-    // Simple CSV Export Logic
     const headers = ["Category,Bookings,Amount"];
-    const rows = categoryList.map(c => 
+    const rows = categoryList.map(c =>
       `${c.category_name},${c.booking_count},${c.booking_amount}`
     );
-    const csvContent = "data:text/csv;charset=utf-8," + headers.concat(rows).join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8," + headers.concat(rows).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `summary_report_${fromDate}_${toDate}.csv`);
+    link.setAttribute("download", `summary_report_${fromDate}_to_${toDate}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   return (
-    <div className="space-y-6 animate-fade-in-up pb-20">
-      
+    <div className="space-y-8 animate-fade-in-up pb-20 max-w-[1600px] mx-auto">
+
       {/* --- HEADER --- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Summary Report</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Financial and operational overview
+          <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Summary Report</h1>
+          <p className="text-slate-500 mt-1 flex items-center gap-2">
+            <TrendingUp size={16} className="text-indigo-500"/>
+            Financial & operational performance overview
           </p>
         </div>
-        <div className="flex gap-2">
-            <button 
-                onClick={handleExport}
-                disabled={categoryList.length === 0}
-                className="flex items-center cursor-pointer gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                <Download size={16} /> Export CSV
-            </button>
-        </div>
+        <button
+          onClick={handleExport}
+          disabled={categoryList.length === 0}
+          className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 font-medium rounded-xl hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Download size={18} /> Export CSV
+        </button>
       </div>
 
-      {/* --- FILTERS BAR --- */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-end md:items-center gap-4">
+      {/* --- FILTER TOOLBAR --- */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-5 items-end">
+        <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative group">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">From Date</label>
+                <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-indigo-500 transition-colors" size={18}/>
+                    <input
+                        type="date"
+                        value={fromDate}
+                        onChange={e => setFromDate(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all cursor-pointer hover:bg-white"
+                    />
+                </div>
+            </div>
+            <div className="relative group">
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">To Date</label>
+                <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-indigo-500 transition-colors" size={18}/>
+                    <input
+                        type="date"
+                        value={toDate}
+                        onChange={e => setToDate(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all cursor-pointer hover:bg-white"
+                    />
+                </div>
+            </div>
+        </div>
         
-        {/* From Date */}
-        <div className="w-full md:w-auto">
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">From</label>
-            <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16}/>
-                <input
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-full md:w-48 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all cursor-pointer text-slate-600 font-medium"
-                />
-            </div>
-        </div>
-
-        {/* To Date */}
-        <div className="w-full md:w-auto">
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">To</label>
-            <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16}/>
-                <input
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                    className="pl-10 pr-4 py-2 w-full md:w-48 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all cursor-pointer text-slate-600 font-medium"
-                />
-            </div>
-        </div>
-
-        {/* Action Button */}
         <button
           onClick={loadSummaryReport}
-          className="w-full md:w-auto mt-auto flex items-center justify-center cursor-pointer gap-2 bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 active:scale-95 transition-all shadow-md shadow-indigo-100 h-[38px]"
+          className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2"
         >
-          <Search size={16} /> Generate
+          {loading ? <RefreshCw className="animate-spin" size={18}/> : <Search size={18} />}
+          Generate Report
         </button>
       </div>
 
       {/* --- LOADING STATE --- */}
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-100">
-           <BallTriangle color="#4F46E5" height={60} width={60} visible={true} />
-           <p className="mt-4 text-slate-400 text-sm animate-pulse">Crunching numbers...</p>
+        <div className="flex flex-col items-center justify-center py-24 bg-white/50 rounded-2xl border border-dashed border-slate-200">
+          <BallTriangle color="#4F46E5" height={60} width={60} />
+          <p className="mt-4 text-slate-500 font-medium animate-pulse">Analyzing data...</p>
         </div>
       )}
 
       {/* --- ERROR STATE --- */}
       {!loading && error && (
-        <div className="bg-red-50 border border-red-100 rounded-xl p-6 text-center text-red-600">
-            <AlertCircle className="mx-auto mb-2" size={32} />
-            <p className="font-medium">{error}</p>
+        <div className="bg-red-50 border border-red-100 rounded-2xl p-8 text-center">
+          <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+             <AlertCircle size={24} />
+          </div>
+          <h3 className="text-red-800 font-bold text-lg mb-1">Unable to load report</h3>
+          <p className="text-red-600/80">{error}</p>
         </div>
       )}
 
-      {/* --- CONTENT --- */}
+      {/* --- DATA CONTENT --- */}
       {!loading && !error && paymentSummary && (
-        <div className="space-y-6 animate-fade-in">
-            
-            {/* 1. STATS GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <StatCard
-                    label="Total Bookings"
-                    value={paymentSummary.total_bookings}
-                    icon={FileText}
-                    color="text-indigo-600"
-                />
-                <StatCard
-                    label="Paid Bookings"
-                    value={paymentSummary.paid_bookings}
-                    icon={CheckCircle}
-                    color="text-emerald-600"
-                />
-                <StatCard
-                    label="Total Revenue"
-                    value={`₹ ${totalBookingAmount.toLocaleString("en-IN")}`}
-                    icon={IndianRupee}
-                    color="text-violet-600"
-                />
-            </div>
+        <div className="space-y-8">
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 1. KEY METRICS GRID */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <StatCard 
+                label="Total Bookings" 
+                value={paymentSummary.total_bookings} 
+                icon={FileText} 
+                color="text-indigo-600"
+            />
+            <StatCard 
+                label="Total Revenue" 
+                value={`₹ ${paymentSummary.booking_amount?.toLocaleString("en-IN")}`} 
+                icon={IndianRupee} 
+                color="text-emerald-600"
+            />
+            <StatCard 
+                label="Paid Bookings" 
+                value={paymentSummary.paid_bookings} 
+                icon={CheckCircle} 
+                color="text-blue-600"
+            />
+            <StatCard 
+                label="Failed Transactions" 
+                value={paymentSummary.failed_bookings} 
+                icon={XCircle} 
+                color="text-red-500"
+            />
+            <StatCard 
+                label="Cancelled Value" 
+                value={`₹ ${paymentSummary.cancel_amount?.toLocaleString("en-IN")}`} 
+                icon={IndianRupee} 
+                color="text-orange-500"
+            />
+             <StatCard 
+                label="Failed Value" 
+                value={`₹ ${paymentSummary.failed_amount?.toLocaleString("en-IN")}`} 
+                icon={XCircle} 
+                color="text-red-400"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
-                {/* 2. CHART SECTION */}
-                <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
-                    <div className="flex items-center gap-2 mb-6">
-                        <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
-                            <PieChart size={18} />
+                {/* 2. REVENUE CHART */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[420px]">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2.5 bg-indigo-50 rounded-lg text-indigo-600">
+                            <PieChart size={20} />
                         </div>
-                        <h2 className="font-bold text-slate-800">Revenue by Category</h2>
+                        <div>
+                            <h2 className="font-bold text-slate-800 text-lg">Revenue Distribution</h2>
+                            <p className="text-xs text-slate-500">Income by room category</p>
+                        </div>
                     </div>
 
-                    <div className="flex-1 min-h-[300px]">
+                    <div className="flex-1 w-full min-h-0">
                         {categoryList.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={categoryList} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis 
                                         dataKey="category_name" 
-                                        tick={{ fontSize: 11, fill: '#64748b' }} 
+                                        tick={{ fontSize: 11, fill: '#64748b', fontWeight: 500 }} 
                                         axisLine={false} 
                                         tickLine={false}
                                         dy={10}
+                                        interval={0} // Show all labels
                                     />
                                     <YAxis 
                                         tick={{ fontSize: 11, fill: '#64748b' }} 
@@ -231,66 +250,106 @@ export default function SummaryReport() {
                                         tickFormatter={(val) => `₹${val/1000}k`}
                                     />
                                     <Tooltip
-                                        cursor={{ fill: '#f8fafc' }}
-                                        contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
-                                        formatter={(value) => [`₹ ${value.toLocaleString("en-IN")}`, 'Revenue']}
+                                        cursor={{ fill: '#f8fafc', opacity: 0.8 }}
+                                        content={({ active, payload }) => {
+                                            if (active && payload && payload.length) {
+                                                return (
+                                                    <div className="bg-white p-3 border border-slate-100 shadow-xl rounded-xl text-xs z-50">
+                                                        <p className="font-bold text-slate-800 mb-1">{payload[0].payload.category_name}</p>
+                                                        <p className="text-indigo-600 font-semibold">
+                                                            ₹ {payload[0].value.toLocaleString("en-IN")}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        }}
                                     />
                                     <Bar
                                         dataKey="booking_amount"
-                                        fill="#6366f1"
                                         radius={[6, 6, 0, 0]}
                                         barSize={40}
                                         animationDuration={1500}
-                                    />
+                                    >
+                                        {categoryList.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill="#6366f1" />
+                                        ))}
+                                    </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="h-full flex items-center justify-center text-slate-400 text-sm">
-                                No revenue data available
+                            <div className="h-full flex flex-col items-center justify-center text-slate-400 text-sm">
+                                <PieChart size={32} className="mb-2 opacity-20"/>
+                                No revenue data available for chart
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* 3. TABLE SECTION */}
-                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-                    <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                        <h3 className="font-bold text-slate-800">Category Breakdown</h3>
-                        <span className="text-xs font-medium text-slate-500 bg-white border px-2 py-1 rounded">
+                {/* 3. DETAILED TABLE */}
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col h-[420px]">
+                    <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <div>
+                             <h3 className="font-bold text-slate-800 text-lg">Category Breakdown</h3>
+                             <p className="text-xs text-slate-500">Detailed performance metrics</p>
+                        </div>
+                        <span className="text-xs font-bold text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-full shadow-sm">
                             {categoryList.length} Categories
                         </span>
                     </div>
                     
-                    <div className="overflow-x-auto flex-1">
+                    <div className="overflow-auto flex-1 custom-scrollbar">
                         <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                                    <th className="px-6 py-4">Category Name</th>
-                                    <th className="px-6 py-4 text-center">Count</th>
-                                    <th className="px-6 py-4 text-right">Revenue</th>
+                            <thead className="sticky top-0 bg-white z-10 shadow-sm">
+                                <tr className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                    <th className="px-6 py-4 bg-slate-50/80 backdrop-blur">Category Name</th>
+                                    <th className="px-6 py-4 text-center bg-slate-50/80 backdrop-blur">Bookings</th>
+                                    <th className="px-6 py-4 text-right bg-slate-50/80 backdrop-blur">Revenue</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 text-sm">
+                            <tbody className="divide-y divide-slate-50 text-sm">
                                 {categoryList.length > 0 ? (
-                                    categoryList.map((item, index) => (
-                                        <tr key={index} className="hover:bg-slate-50/80 transition-colors">
+                                    categoryList.map((item, index) => {
+                                        // Calculate percentage contribution
+                                        const percent = totalRevenue > 0 ? (item.booking_amount / totalRevenue) * 100 : 0;
+                                        
+                                        return (
+                                        <tr key={index} className="hover:bg-slate-50 transition-colors group">
                                             <td className="px-6 py-4 font-medium text-slate-700">
-                                                {item.category_name}
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-2 h-8 bg-indigo-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                                    {item.category_name}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                                <span className="inline-flex items-center justify-center min-w-[32px] px-2 py-1 rounded-lg text-xs font-bold bg-slate-100 text-slate-600 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                                                     {item.booking_count}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-right font-semibold text-indigo-600">
-                                                ₹ {item.booking_amount.toLocaleString("en-IN")}
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex flex-col items-end">
+                                                    <span className="font-bold text-slate-800">
+                                                        ₹ {item.booking_amount.toLocaleString("en-IN")}
+                                                    </span>
+                                                    {/* Visual Progress Bar */}
+                                                    <div className="w-24 h-1.5 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
+                                                        <div 
+                                                            className="h-full bg-indigo-500 rounded-full" 
+                                                            style={{ width: `${percent}%` }}
+                                                        ></div>
+                                                    </div>
+                                                    <span className="text-[10px] text-slate-400 mt-0.5">{percent.toFixed(1)}%</span>
+                                                </div>
                                             </td>
                                         </tr>
-                                    ))
+                                    )})
                                 ) : (
                                     <tr>
-                                        <td colSpan={3} className="px-6 py-12 text-center text-slate-400 text-sm">
-                                            No data to display
+                                        <td colSpan={3} className="px-6 py-20 text-center text-slate-400 text-sm">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <Filter size={24} className="opacity-20" />
+                                                No data found for this selection
+                                            </div>
                                         </td>
                                     </tr>
                                 )}

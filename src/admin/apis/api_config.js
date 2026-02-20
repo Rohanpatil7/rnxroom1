@@ -1,7 +1,11 @@
 // 1. Define your base values and environment variables
-const BASE_URL = "/booking/api";
-const USERNAME = import.meta.env.VITE_API_USERNAME;
-const PASSWORD = import.meta.env.VITE_API_PASSWORD;
+
+const isLocal = import.meta.env.DEV;
+const BASE_URL = isLocal 
+  ? "/booking/api" 
+  : "https://membership.xpresshotelpos.com/booking/api";
+const USERNAME = import.meta.env.VITE_API_USERNAME || "bookinguser";
+const PASSWORD = import.meta.env.VITE_API_PASSWORD || "booking@123";
 
 // 2. Export the configuration object expected by admin_api.js
 export const API_CONFIG = {

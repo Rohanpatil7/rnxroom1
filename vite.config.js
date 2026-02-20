@@ -19,12 +19,11 @@ export default ({ mode }) => {
       secure: false,
     },
 
-    "/booking/api": {
+    "/booking/api_bck": {
       target: env.VITE_API_URL || "https://membership.xpresshotelpos.com/",
       changeOrigin: true,
       secure: true,
-      rewrite: (path) => path.replace(/^\/booking\/api/, "/booking/api"),
-
+      rewrite: (path) => path.replace(/^\/booking\/api_bck/, "/booking/api_bck"),
     },
 
     "/pg_demo": {

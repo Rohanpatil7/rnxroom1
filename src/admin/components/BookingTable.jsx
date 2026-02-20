@@ -1,6 +1,6 @@
 // src/admin/components/BookingTable.jsx
 import React from 'react';
-import { Eye, Edit, Loader, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, Edit, Loader, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, AlignCenter } from 'lucide-react';
 
 const BookingTable = ({ 
   bookings, 
@@ -52,9 +52,9 @@ const BookingTable = ({
             <tr className="bg-slate-50/50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <th className="p-4 w-10"></th>
               
-              <SortableHeader label="Booking ID" columnKey="BookingID" />
-              <SortableHeader label="Guest" columnKey="Guest" />
-              <SortableHeader label="Room" columnKey="RoomName" />
+              <SortableHeader label="Booking ID" columnKey="BookingID" className='justify-center' />
+              <SortableHeader label="Guest" columnKey="Guest" className='text-center' />
+              <SortableHeader label="Room" columnKey="RoomName" className='text-center' />
               <SortableHeader label="Check-In" columnKey="CheckInDate" />
               
               <th className="p-4">Status</th>

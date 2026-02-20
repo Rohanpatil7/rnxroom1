@@ -8,7 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
-  Settings,
   X
 } from 'lucide-react';
 
@@ -19,6 +18,11 @@ const AdminSidebar = ({
   setIsMobileMenuOpen, 
   handleLogout 
 }) => {
+
+  // ✅ Read dynamic values
+  const hotelName = localStorage.getItem("hotelName") || "Hotel";
+  const adminId = sessionStorage.getItem("adminToken");
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -44,11 +48,18 @@ const AdminSidebar = ({
         <div className="h-18 flex items-center px-6 py-5 mb-2">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
-              <span className="font-bold text-white text-lg">H</span>
+              <span className="font-bold text-white text-lg">
+                {hotelName.charAt(0)}
+              </span>
             </div>
+
             <div className={`transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 md:hidden'}`}>
-              <h1 className="font-bold text-slate-800 text-lg">HotelAdmin</h1>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Management</p>
+              <h1 className="font-bold text-slate-800 text-lg truncate">
+                {hotelName}
+              </h1>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                Admin Panel
+              </p>
             </div>
           </div>
 
@@ -64,7 +75,7 @@ const AdminSidebar = ({
         {/* Desktop Toggle */}
         <button 
           onClick={() => setSidebarOpen(!isSidebarOpen)} 
-          className="hidden md:flex absolute -right-3 top-8 bg-white text-slate-400 hover:text-indigo-600 p-1.5 rounded-full shadow-md border z-50 cursor-pointer "
+          className="hidden md:flex absolute -right-3 top-8 bg-white text-slate-400 hover:text-indigo-600 p-1.5 rounded-full shadow-md border z-50 cursor-pointer"
         >
           {isSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
         </button>
@@ -73,52 +84,11 @@ const AdminSidebar = ({
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto py-2">
           <SidebarSection title="Overview" isOpen={isSidebarOpen} />
 
-          <SidebarLink 
-            to="/admin/dashboard" 
-            icon={LayoutDashboard} 
-            label="Dashboard" 
-            isOpen={isSidebarOpen} 
-          />
-
-          <SidebarLink 
-            to="/admin/reports/summary" 
-            icon={BarChart3} 
-            label="Summary Report" 
-            isOpen={isSidebarOpen}
-          />
-
-          <SidebarLink 
-            to="/admin/bookings" 
-            icon={CalendarCheck} 
-            label="Bookings" 
-            isOpen={isSidebarOpen}
-          />
-
-          {/* NEW MAIN MENU ITEMS */}
-          <SidebarLink 
-            to="/admin/reports/guest-wise" 
-            icon={User} 
-            label="Guest Wise Report" 
-            isOpen={isSidebarOpen}
-          />
-
-          <SidebarLink 
-            to="/admin/reports/room-category" 
-            icon={BarChart3} 
-            label="Category Wise Report" 
-            isOpen={isSidebarOpen}
-          />
-
-          <div className="my-4 border-t border-slate-100 mx-2"></div>
-
-          {/* <SidebarSection title="Settings" isOpen={isSidebarOpen} /> */}
-
-          {/* <SidebarLink 
-            to="/admin/settings" 
-            icon={Settings} 
-            label="Configuration" 
-            isOpen={isSidebarOpen}
-          /> */}
+          <SidebarLink to="/admin/dashboard" icon={LayoutDashboard} label="Dashboard" isOpen={isSidebarOpen} />
+          <SidebarLink to="/admin/reports/summary" icon={BarChart3} label="Summary Report" isOpen={isSidebarOpen} />
+          <SidebarLink to="/admin/bookings" icon={CalendarCheck} label="Bookings" isOpen={isSidebarOpen} />
+          <SidebarLink to="/admin/reports/guest-wise" icon={User} label="Guest Wise Report" isOpen={isSidebarOpen} />
+          <SidebarLink to="/admin/reports/room-category" icon={BarChart3} label="Category Wise Report" isOpen={isSidebarOpen} />
         </nav>
 
         {/* Footer */}
@@ -131,13 +101,17 @@ const AdminSidebar = ({
             {isSidebarOpen && (
               <>
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-700">Admin User</p>
-                  <p className="text-xs text-slate-500">admin@hotel.com</p>
+                  <p className="text-sm font-semibold text-slate-700">
+                    {hotelName}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Admin ID: {adminId}
+                  </p>
                 </div>
 
                 <button 
                   onClick={handleLogout}
-                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg corsor-pointer transition-colors"
+                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                 >
                   <LogOut size={16} />
                 </button>
@@ -173,12 +147,8 @@ const SidebarLink = ({ to, icon: Icon, label, isOpen }) => (
     `}
   >
     <Icon size={20} />
+    <span className={`${!isOpen ? 'md:hidden' : 'block'}`}>{label}</span>
 
-    <span className={`${!isOpen ? 'md:hidden' : 'block'}`}>
-      {label}
-    </span>
-
-    {/* Tooltip when collapsed */}
     {!isOpen && (
       <div className="hidden md:block absolute left-full ml-3 px-2 py-1 bg-slate-800 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 whitespace-nowrap z-50">
         {label}

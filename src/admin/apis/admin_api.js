@@ -20,7 +20,13 @@ export const adminLogin = async (username, password) => {
       }),
     });
     const data = await response.json();
-    return data;
+    
+    if (data?.result?.length > 0 && data.result[0].Userid) {
+        return data; 
+    }
+    
+    return null; // Return null if credentials didn't match
+
   } catch (error) {
     throw new Error(error.message);
   }
@@ -212,4 +218,30 @@ export const fetchSummaryReport = async ({ FromDate, ToDate }) => {
   });
 
   return response.json();
+};
+
+// ---------------------------------------------------------
+// NEW: Fetch Bookings by Mobile Number (PDF Reference #7)
+// ---------------------------------------------------------
+export const fetchBookingsByMobile = async (mobileNo) => {
+  try {
+    const { hotelParam } = getCommonParams();
+
+    const response = await fetch(`${API_CONFIG.BASE_URL}/get_bookings_from_mob.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ApiUser: API_CONFIG.API_USER,
+        ApiPass: API_CONFIG.API_PASS,
+        Parameter: hotelParam, // [cite: 312]
+        MobileNo: mobileNo     // [cite: 313]
+      }),
+    });
+
+    const data = await response.json();
+    return data; // Returns { status: 1, bookings: [...] } [cite: 318]
+  } catch (error) {
+    console.error("Fetch by Mobile Error:", error);
+    return { status: 0, bookings: [] };
+  }
 };

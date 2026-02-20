@@ -1,5 +1,4 @@
 // src/components/Costcard.jsx
-
 import React from 'react';
 
 const formatDate = (date) => {
@@ -12,80 +11,49 @@ const formatDate = (date) => {
 };
 
 const formatCurrency = (amount) => {
+  if (isNaN(amount) || amount === null || amount === undefined) return '₹0';
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount || 0);
+  }).format(amount);
 };
 
 function Costcard({
   bookingDetails,
   hotelData,
-  taxData,
-  // overrides coming from Booking.jsx
-  serviceFee: serviceFeeProp,
-  grandTotal: grandTotalProp,
-  extraAdultCost: extraAdultCostProp,
-  extraChildCost: extraChildCostProp,
+  taxBreakdown = [],
+  calculatedTaxAmount = 0,
+  serviceFee = 0,
+  grandTotal = 0,
+  dynamicRoomCost,
+  extraAdultCost = 0,
+  extraChildCost = 0,
+  TaxableAmount = 0,
+  roomTypePrices = {}
 }) {
-  console.log('=== Costcard render ===');
-  console.log('bookingDetails:', bookingDetails);
-  console.log('serviceFeeProp:', serviceFeeProp);
-  console.log('grandTotalProp:', grandTotalProp);
-  console.log('extraAdultCostProp:', extraAdultCostProp);
-  console.log('extraChildCostProp:', extraChildCostProp);
-
   if (!bookingDetails) return null;
 
   const {
     rooms = [],
     dates = {},
     totalPrice = 0,
-    // values stored inside bookingDetails (fallbacks)
-    extraAdultCost: extraAdultCostFromDetails = 0,
-    extraChildCost: extraChildCostFromDetails = 0,
   } = bookingDetails;
 
   const { checkIn, checkOut, nights = 0 } = dates;
-  const totalRooms = rooms.reduce((sum, item) => sum + item.quantity, 0);
-
-  // ✅ use props if provided, else fall back to bookingDetails values
-  const extraAdultCost =
-    extraAdultCostProp ?? extraAdultCostFromDetails ?? 0;
-  const extraChildCost =
-    extraChildCostProp ?? extraChildCostFromDetails ?? 0;
-
-  const serviceFee =
-    serviceFeeProp ??
-    hotelData?.ServiceCharges ??
-    hotelData?.serviceFee ??
-    0;
-
-  const taxableAmount = totalPrice + extraAdultCost + extraChildCost;
-
-  const totalGstAmount =
-    taxData?.taxes?.reduce(
-      (sum, tax) =>
-        sum + taxableAmount * (parseFloat(tax.Percentage) / 100),
-      0
-    ) || taxableAmount * 0.18;
-
-  const grandTotal =
-    grandTotalProp ??
-    (taxableAmount + totalGstAmount + serviceFee);
-
-  console.log('Computed extraAdultCost:', extraAdultCost);
-  console.log('Computed extraChildCost:', extraChildCost);
-  console.log('Computed serviceFee:', serviceFee);
-  console.log('Computed grandTotal:', grandTotal);
-
+  const totalRooms = rooms.reduce((sum, item) => sum + (item.quantity || 0), 0);
   const hotelImage = hotelData?.HotelImages?.[0];
 
+  const fullRoomCost =
+    dynamicRoomCost !== undefined
+      ? dynamicRoomCost
+      : (totalPrice + extraAdultCost);
+
+  const displayBaseCost = fullRoomCost - extraAdultCost;
+
   return (
-    <div className="max-w-screen rounded-xl md:w-full bg-white font-sans shadow-lg overflow-hidden mb-12 ">
-      {/* Hotel Image */}
+    <div className="max-w-screen rounded-xl md:w-full bg-white font-sans shadow-lg overflow-hidden mb-12">
       {hotelImage && (
         <img className="w-full h-48 object-cover" src={hotelImage} alt="Hotel" />
       )}
@@ -103,87 +71,98 @@ function Costcard({
 
         <hr className="my-2" />
 
-        {/* Room Cost Summary */}
-        <div>
-          <div className="space-y-2">
-            {rooms.map((item, index) => (
-              <div
-                key={`room_${item.roomId}_${index}`}
-                className="flex items-center justify-between text-sm"
-              >
-                <p className="text-indigo-600 pr-2">
+        {/* Room List */}
+        <div className="space-y-2 opacity-80">
+          {rooms.map((item, index) => {
+            const dynamicPrice = roomTypePrices[item.roomId];
+
+            const displayPrice =
+              dynamicPrice !== undefined
+                ? dynamicPrice
+                : (item.quantity || 0) * (item.pricePerNight || 0) * nights;
+
+            return (
+              <div key={`room_${item.roomId}_${index}`} className="flex items-center justify-between text-xs text-gray-500">
+                <p className="pr-2">
                   {item.quantity} x {item.title}
                 </p>
                 <p className="font-medium text-gray-700 whitespace-nowrap">
-                  {formatCurrency(item.quantity * item.pricePerNight * nights)}
+                  {formatCurrency(displayPrice)}
                 </p>
               </div>
-            ))}
+            );
+          })}
+        </div>
+
+        <hr className="my-2 border border-dotted border-black" />
+
+        {/* Cost Breakdown */}
+        <div className="space-y-1">
+
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">Total Room Cost</p>
+            <p className="font-medium text-gray-800">{formatCurrency(displayBaseCost)}</p>
           </div>
 
-          <hr className="my-2 border border-dotted border-black" />
-
-          {/* Cost Breakdown */}
-          <div className="space-y-1">
+          {extraAdultCost > 0 && (
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">Total Room Cost</p>
-              <p className="font-medium text-gray-800">
-                {formatCurrency(totalPrice)}
-              </p>
+              <p className="text-sm text-gray-600">Extra Adult Cost</p>
+              <p className="font-medium text-gray-800">{formatCurrency(extraAdultCost)}</p>
             </div>
+          )}
 
-            {extraAdultCost > 0 && (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">Extra Adult Cost</p>
-                <p className="font-medium text-gray-800">
-                  {formatCurrency(extraAdultCost)}
-                </p>
-              </div>
-            )}
+          {extraChildCost > 0 && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">Extra Child Cost</p>
+              <p className="font-medium text-gray-800">{formatCurrency(extraChildCost)}</p>
+            </div>
+          )}
 
-            {extraChildCost > 0 && (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">Extra Child Cost</p>
-                <p className="font-medium text-gray-800">
-                  {formatCurrency(extraChildCost)}
-                </p>
-              </div>
-            )}
+          {/* Taxable */}
+          <div className="flex items-center justify-between border-t border-gray-100 pt-1 mt-1">
+            <p className="text-sm font-semibold text-gray-700">Taxable Amount</p>
+            <p className="font-semibold text-gray-800">{formatCurrency(TaxableAmount)}</p>
+          </div>
 
-            {/* Taxes */}
-            {taxData?.taxes?.map((tax, i) => (
-              <div
-                key={`${tax.TaxGroupID || tax.TaxGroupName}_${i}`}
-                className="flex items-center justify-between"
-              >
+          {/* Taxes */}
+          {taxBreakdown.length > 0 ? (
+            taxBreakdown.map((tax, i) => (
+              <div key={`${tax.TaxGroupName}_${i}`} className="flex items-center justify-between">
                 <p className="text-sm text-gray-600">
-                  {tax.TaxGroupName} ({parseFloat(tax.Percentage)}%)
-                </p>
-                <p className="font-medium text-gray-800">
-                  {formatCurrency(
-                    taxableAmount * (parseFloat(tax.Percentage) / 100)
+                  {tax.TaxGroupName}
+                  {tax.Percent !== undefined && (
+                    <span className="text-gray-500"> ({tax.Percent}%)</span>
                   )}
                 </p>
+                <p className="font-medium text-gray-800">
+                  {formatCurrency(tax.Amount)}
+                </p>
               </div>
-            ))}
+            ))
+          ) : (
+            calculatedTaxAmount > 0 && (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">Taxes</p>
+                <p className="font-medium text-gray-800">
+                  {formatCurrency(calculatedTaxAmount)}
+                </p>
+              </div>
+            )
+          )}
 
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">Service Fee</p>
-              <p className="font-medium text-gray-800">
-                {formatCurrency(serviceFee)}
-              </p>
-            </div>
-          </div>
-
-          <hr className="my-2" />
-
-          {/* Grand Total */}
           <div className="flex items-center justify-between">
-            <p className="text-xl font-semibold text-indigo-700">Grand Total</p>
-            <p className="text-xl font-semibold text-indigo-700">
-              {formatCurrency(grandTotal)}
-            </p>
+            <p className="text-sm text-gray-600">Service Fee</p>
+            <p className="font-medium text-gray-800">{formatCurrency(serviceFee)}</p>
           </div>
+        </div>
+
+        <hr className="my-2" />
+
+        <div className="flex items-center justify-between">
+          <p className="text-xl font-semibold text-indigo-700">Grand Total</p>
+          <p className="text-xl font-semibold text-indigo-700">
+            {formatCurrency(grandTotal)}
+          </p>
         </div>
       </div>
     </div>

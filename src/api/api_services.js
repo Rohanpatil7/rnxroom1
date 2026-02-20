@@ -117,23 +117,28 @@ export async function saveBookingDetails(data) {
 
 /* ---------------- SEND OTP ---------------- */
 export const sendOtp = async (mobile, otp) => {
+  // 1. Destructure config
   const {
     Url,
     UserName,
     Password,
-    Parameter
+    Parameter: staticParam
   } = OTP_CONFIG;
 
-  // Construct payload to match: { ApiUser, ApiPass, Mobile, OTP, Parameter }
+  // 2. [CRITICAL] Fetch latest parameter dynamically from localStorage 
+  // This ensures it works even if the config loaded before the param was saved.
+  const currentParam = localStorage.getItem("hotelParam") || staticParam;
+
+  // 3. Construct payload matching the API requirement exactly
   const payload = {
-    ApiUser: UserName,
-    ApiPass: Password,
-    Mobile: mobile,
-    OTP: otp,
-    Parameter: Parameter
+    ApiUser: UserName,   // Maps to 'pmsuser' (from .env)
+    ApiPass: Password,   // Maps to 'pms@123' (from .env)
+    Mobile: mobile,      // The user's mobile input
+    OTP: otp,            // The generated OTP
+    Parameter: currentParam // The dynamic hotel parameter
   };
 
-  console.log("Sending OTP to:", Url, payload);
+  console.log("📨 Sending OTP Payload:", payload);
   
   try {
     const response = await axios.post(Url, payload, {
@@ -141,10 +146,10 @@ export const sendOtp = async (mobile, otp) => {
         'Content-Type': 'application/json',
       },
     });
-    console.log("OTP API Response:", response.data);
+    console.log("✅ OTP API Response:", response.data);
     return response.data;
   } catch (error) {
-    console.error("OTP send failed:", error.message);
+    console.error("❌ OTP send failed:", error.message);
     throw error;
   }
 };

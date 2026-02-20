@@ -305,7 +305,7 @@ function Home({ hotelData, isBookingDisabled }) {
           <div className="w-auto hover:scale-110 transition-all">
             <button
               onClick={() => setShowCancelPopup(true)}
-              className={`rounded-lg px-6 py-3 text-sm font-medium transition-all
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-all
                 ${isBookingDisabled
                   ? "bg-gray-400 text-white cursor-not-allowed"
                   : "bg-gradient-to-b from-red-500 via-red-600 to-red-700 text-white hover:shadow-lg"}
@@ -319,7 +319,7 @@ function Home({ hotelData, isBookingDisabled }) {
             <NavLink
               to="/allrooms"
               state={{ initialBookingDetails: bookingDetails }}
-              className={`rounded-lg w-full px-6 py-3 text-sm font-medium border transition-all  ${
+              className={`rounded-lg px-4 py-2 text-sm font-medium border transition-all  ${
                 isBookingDisabled
                   ? "bg-gray-400 text-white cursor-not-allowed"
                   : "bg-gradient-to-b from-indigo-500 via-indigo-600 to-indigo-700   text-white hover:bg-indigo-700 hover:shadow-lg shadow-indigo-200 backdrop-brightness-75 "

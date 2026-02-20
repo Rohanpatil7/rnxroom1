@@ -1,6 +1,13 @@
 // This relative path is non-negotiable. It MUST start with '/api' to trigger
 // the proxy rule defined in your vite.config.js.
-export const API_BASE = "/booking/api";
+const isLocal = import.meta.env.DEV;
+
+// AUTOMATIC SWITCHING:
+// 1. If Local: Use "/booking/api" so it goes through your Vite Proxy (Fixes CORS)
+// 2. If Live: Use the full URL because cPanel doesn't have a proxy
+export const API_BASE = isLocal 
+  ? "/booking/api_bck" 
+  : "https://membership.xpresshotelpos.com/booking/api_bck";
 
 // --- Common Credentials ---
 // These are static credentials from the API documentation.

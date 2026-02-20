@@ -11,8 +11,7 @@ import {
   Wallet,
   Briefcase
 } from "lucide-react";
-import { fetchBookingRegister } from "../apis/admin_api";
-// Assuming StatCard is available here based on your file list, otherwise inline styles are used as fallback
+import { fetchBookingRegister, fetchBookingsByCustomerName } from "../apis/admin_api"; //
 import StatCard from "../components/StateCard"; 
 
 export default function GuestWiseBookings() {
@@ -50,6 +49,41 @@ export default function GuestWiseBookings() {
     }
   };
 
+  // --- NEW SEARCH HANDLER ---
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchTerm.trim()) {
+      // If search is empty, reload full register
+      loadBookings();
+      return;
+    }
+
+    setLoading(true);
+    setCurrentPage(1); // Reset to first page
+    try {
+      const res = await fetchBookingsByCustomerName(searchTerm); //
+      
+      if (res && res.status === 1 && Array.isArray(res.bookings)) {
+        // Normalize data to match fetchBookingRegister structure for aggregation
+        const normalizedData = res.bookings.map(b => ({
+            ...b,
+            // Split GuestName into First/Last if they don't exist, as aggregation relies on them
+            GuestFirstName: b.GuestFirstName || (b.GuestName ? b.GuestName.split(' ')[0] : ''), 
+            GuestLastName: b.GuestLastName || (b.GuestName ? b.GuestName.split(' ').slice(1).join(' ') : ''),
+            GrandTotal: b.GrandTotal || b.TotalAmount
+        }));
+        setBookings(normalizedData);
+      } else {
+        setBookings([]);
+      }
+    } catch (err) {
+      console.error("Guest search failed:", err);
+      setBookings([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ===============================
   // DATA PROCESSING
   // ===============================
@@ -59,7 +93,11 @@ export default function GuestWiseBookings() {
     const map = {};
 
     bookings.forEach((b) => {
-      const guestName = `${b.GuestFirstName || ""} ${b.GuestLastName || ""}`.trim();
+      // Robust name handling
+      const fName = b.GuestFirstName || "";
+      const lName = b.GuestLastName || "";
+      const guestName = (fName || lName) ? `${fName} ${lName}`.trim() : (b.GuestName || "Unknown Guest");
+
       if (!guestName) return;
 
       // Date filter applied to individual bookings before aggregation
@@ -96,12 +134,12 @@ export default function GuestWiseBookings() {
 
     let result = Object.values(map);
 
-    // Search filter (Client side on grouped data)
+    // Note: We removed the client-side 'includes(searchTerm)' filter here 
+    // because the API now handles the searching. 
+    // However, if you want to filter strictly within the API results:
     if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter((g) =>
-        g.guestName.toLowerCase().includes(term)
-      );
+       const term = searchTerm.toLowerCase();
+       result = result.filter(g => g.guestName.toLowerCase().includes(term));
     }
 
     return result;
@@ -158,6 +196,12 @@ export default function GuestWiseBookings() {
     setShowDateFilter(false);
   };
 
+  // Clear search and reload all
+  const clearSearch = () => {
+    setSearchTerm("");
+    loadBookings();
+  };
+
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
   return (
@@ -168,12 +212,6 @@ export default function GuestWiseBookings() {
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Guest Wise Analytics</h1>
           <p className="text-sm text-slate-500 mt-1">Insights into guest performance and revenue.</p>
-        </div>
-        <div className="flex gap-2">
-          {/* Export button placeholder */}
-          {/* <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
-             <Download size={16} /> Export
-          </button> */}
         </div>
       </div>
 
@@ -191,28 +229,39 @@ export default function GuestWiseBookings() {
           icon={Briefcase} 
           color="text-indigo-600" 
         />
-        {/* <StatCard 
-          label="Total Revenue" 
-          value={`₹${stats.revenue.toLocaleString()}`} 
-          icon={Wallet} 
-          color="text-emerald-600" 
-        /> */}
       </div>
 
       {/* Filters Bar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
         
-        {/* Search */}
-        <div className="relative w-full md:w-96">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by guest name..."
-            value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-            className="w-full pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
-          />
-        </div>
+        {/* Search Form */}
+        <form onSubmit={handleSearch} className="relative w-full md:w-96 flex gap-2">
+          <div className="relative flex-1">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+                type="text"
+                placeholder="Search by guest name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
+            />
+            {searchTerm && (
+                <button 
+                  type="button" 
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
+                >
+                    <RefreshCw size={14} />
+                </button>
+            )}
+          </div>
+          <button 
+            type="submit"
+            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Search
+          </button>
+        </form>
 
         {/* Date Filter */}
         <div className="relative w-full md:w-auto z-20">
