@@ -171,8 +171,17 @@ const Gueatcounter = ({ rooms, dates, initialGuestCounts, initialChildrenAges, o
         totalExtraAdultCost += instanceExtraCost;
       }
 
-      // Aggregate Base Cost by Room Type (for Costcard display)
-      roomTypeBaseCosts[roomId] = (roomTypeBaseCosts[roomId] || 0) + instanceBaseCost;
+      // Aggregate Base Cost by Room Index (for Costcard display)
+      // Using roomIndex instead of roomId because different meal plans
+      // of the same room category share the same roomId but need separate prices
+      const roomIdx = roomInstances.indexOf(roomInstances.find(r => r.instanceId === instanceId));
+      const parentRoomIndex = rooms.findIndex((r, idx) => {
+        const baseId = `${r.roomId}_${idx}`;
+        return instanceId.startsWith(baseId);
+      });
+      if (parentRoomIndex !== -1) {
+        roomTypeBaseCosts[parentRoomIndex] = (roomTypeBaseCosts[parentRoomIndex] || 0) + instanceBaseCost;
+      }
 
       // --- [UPDATED LOGIC START] ---
       // Check individual children's ages. If age > 5, apply the charge.

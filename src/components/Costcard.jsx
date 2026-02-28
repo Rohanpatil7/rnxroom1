@@ -74,7 +74,8 @@ function Costcard({
         {/* Room List */}
         <div className="space-y-2 opacity-80">
           {rooms.map((item, index) => {
-            const dynamicPrice = roomTypePrices[item.roomId];
+            // Use array index to match the roomTypeBaseCosts keyed by room index in Gueatcounter
+            const dynamicPrice = roomTypePrices[index];
 
             const displayPrice =
               dynamicPrice !== undefined
